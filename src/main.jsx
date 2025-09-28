@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { SidebarProvider } from "@/components/ui/sidebar"
+import { ThemeProvider } from "@/components/ThemeProvider"
 
-document.body.classList.add('dark')
+
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <SidebarProvider>       
-      <App />
-    </SidebarProvider>
+    <ThemeProvider>
+      <SidebarProvider>
+        <App />
+      </SidebarProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

@@ -6,10 +6,11 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
+import { ModeToggle } from "@/components/ModeToggle";
 
-import { navItems } from "@/config/nav-items"
-import { NavLink } from "react-router-dom"
+import { navItems } from "@/config/nav-items";
+import { NavLink } from "react-router-dom";
 
 export function AppSidebar({ role = "admin" }) {
   return (
@@ -40,6 +41,9 @@ export function AppSidebar({ role = "admin" }) {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <div className="p-4 border-t">
+        <ModeToggle />
+      </div>
     </Sidebar>
   )
 }
