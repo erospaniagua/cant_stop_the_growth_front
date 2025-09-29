@@ -1,18 +1,17 @@
-
-import { Home, Users, GraduationCap, Settings } from "lucide-react"
+import { Home, Users, GraduationCap, Settings, BookOpen, Building2 } from "lucide-react"
 
 export const navItems = {
   admin: [
-    { title: "Companies", icon: Home, href: "/companies" },
-    { title: "Coaches", icon: Users, href: "/coaches" },
-    { title: "Students", icon: GraduationCap, href: "/students" },
-    { title: "Settings", icon: Settings, href: "/settings" },
+    { title: "Companies", href: "/companies", icon: Building2 },
+    { title: "Coaches", href: "/coaches", icon: Users },
+    { title: "Students", href: "/students", icon: GraduationCap },
+    { title: "Settings", href: "/settings", icon: Settings },
   ],
   coach: [
-    { title: "My Students", icon: Users, href: "/students" },
-    { title: "Courses", icon: GraduationCap, href: "/courses" },
+    { title: "My Students", href: "/students", icon: Users },
+    { title: "Courses", href: "/courses", icon: BookOpen },
   ],
   student: [
-    { title: "My Courses", icon: GraduationCap, href: "/courses" },
+    { title: "My Courses", href: "/courses", icon: GraduationCap },
   ],
 }

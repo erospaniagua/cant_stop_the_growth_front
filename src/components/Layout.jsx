@@ -3,7 +3,7 @@ import Topbar from "./Topbar"
 
 export default function Layout({ children, role = "admin" }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full">
       <AppSidebar role={role} />
       <div className="flex-1 flex flex-col">
         <Topbar />
