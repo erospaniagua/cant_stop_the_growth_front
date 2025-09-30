@@ -7,7 +7,7 @@ export function UserProvider({ children }) {
   // Hardcoded for now, but later fetch from API or auth provider
   const [user, setUser] = useState({
     name: "Eros",
-    role: "student", // "admin" | "coach" | "student"
+    role: "company", // "admin" | "coach" | "student" | "company"
   })
 
   return (

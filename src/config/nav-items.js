@@ -1,17 +1,27 @@
-import { Home, Users, GraduationCap, Settings, BookOpen, Building2 } from "lucide-react"
+// src/config/nav-items.js
+import { Home, Users, GraduationCap, Settings, BookOpen, Building2, BarChart } from "lucide-react"
 
 export const navItems = {
   admin: [
-    { title: "Companies", href: "/companies", icon: Building2 },
-    { title: "Coaches", href: "/coaches", icon: Users },
-    { title: "Students", href: "/students", icon: GraduationCap },
-    { title: "Settings", href: "/settings", icon: Settings },
+    { title: "dashboard", href: "/", icon: Home },
+    { title: "companies", href: "/companies", icon: Building2 },
+    { title: "coaches", href: "/coaches", icon: Users },
+    { title: "courses", href: "/courses", icon: BookOpen },
+    { title: "students", href: "/students", icon: GraduationCap },
+    { title: "analytics", href: "/analytics", icon: BarChart },
+    { title: "settings", href: "/settings", icon: Settings },
   ],
   coach: [
-    { title: "My Students", href: "/students", icon: Users },
-    { title: "Courses", href: "/courses", icon: BookOpen },
+    { title: "students", href: "/students", icon: Users },
+    { title: "courses", href: "/courses", icon: BookOpen },
+    { title: "settings", href: "/settings", icon: Settings }
   ],
   student: [
-    { title: "My Courses", href: "/courses", icon: GraduationCap },
+    { title: "courses", href: "/courses", icon: GraduationCap },
+    { title: "settings", href: "/settings", icon: Settings }
+  ],
+  company: [
+    { title: "courses", href: "/courses", icon: GraduationCap },
+    { title: "settings", href: "/settings", icon: Settings }
   ],
 }
