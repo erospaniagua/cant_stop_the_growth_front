@@ -81,8 +81,21 @@ i18n.use(initReactI18next).init({
         companyLogo: "Company Logo",
         dragOrClickImage: "Drag & drop an image here, or click to upload",
         dragOrClickPdf: "Drag & drop a PDF file here, or click to upload",
-
+        //form errors
         
+  requiredName: "Please enter the company name.",
+  requiredOwner: "Please enter the owner's name.",
+  requiredPhone: "Please enter a phone number.",
+  invalidPhone: "Phone must contain 7 to 15 digits.",
+  requiredEmail: "Please enter an email address.",
+  invalidEmail: "Please enter a valid email address.",
+  requiredRevenue: "Please enter the company's revenue.",
+  invalidRevenue: "Revenue must be a positive number.",
+  requiredType: "Please select a company type.",
+  requiredTrade: "Please select at least one trade.",
+  requiredCoach: "Please select a coach.",
+  requiredSalesman: "Please select a salesman.",
+  requiredSuccessManager: "Please select a success manager.", 
       },
     },
     es: {
@@ -162,7 +175,21 @@ i18n.use(initReactI18next).init({
         companyLogo: "Logotipo de la Empresa",
         dragOrClickImage: "Arrastra y suelta una imagen aquí o haz clic para subirla",
         dragOrClickPdf: "Arrastra y suelta un archivo PDF aquí o haz clic para subirlo",
+        //form errors
         
+  requiredName: "Por favor, ingresa el nombre de la empresa.",
+  requiredOwner: "Por favor, ingresa el nombre del propietario.",
+  requiredPhone: "Por favor, ingresa un número de teléfono.",
+  invalidPhone: "El número de teléfono debe tener entre 7 y 15 dígitos.",
+  requiredEmail: "Por favor, ingresa un correo electrónico.",
+  invalidEmail: "Por favor, ingresa un correo electrónico válido.",
+  requiredRevenue: "Por favor, ingresa los ingresos de la empresa.",
+  invalidRevenue: "Los ingresos deben ser un número positivo.",
+  requiredType: "Por favor, selecciona un tipo de empresa.",
+  requiredTrade: "Selecciona al menos un oficio.",
+  requiredCoach: "Por favor, selecciona un coach.",
+  requiredSalesman: "Por favor, selecciona un vendedor.",
+  requiredSuccessManager: "Por favor, selecciona un gerente de éxito."   
       },
     },
   },
