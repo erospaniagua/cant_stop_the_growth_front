@@ -10,13 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Pencil, Upload } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -28,10 +21,13 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   const fileInputRef = useRef(null)
   const logoInputRef = useRef(null)
 
-  // Mock single-select options (replace with API later)
+  // Mock dropdown options (single select fields)
   const coachOptions = ["Danny Vega", "Alice Parker", "Tomás Aguilar"]
   const salesmanOptions = ["Sofia Ramirez", "Liam Cohen", "Alex Wang"]
   const successManagerOptions = ["Elena Cruz", "Miguel Torres", "Ryan Lee"]
+
+  const subscriptionOptions = ["Leadership", "Service", "Sales", "Office Staff", "Install"]
+  const serviceOptions = ["Onsite", "Career Mapping", "Onboarding Development"]
 
   const [formData, setFormData] = useState({
     name: "",
@@ -48,8 +44,8 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     kickoffDay: "",
     onsiteDay: "",
     revenue: "",
-    quote: null, // PDF
-    logo: null,  // Image
+    quote: null,
+    logo: null,
   })
 
   const [errors, setErrors] = useState({})
@@ -127,7 +123,6 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     return newErrors
   }
 
-  // Real-time validation
   useEffect(() => {
     setErrors(validateAll())
   }, [formData])
@@ -152,19 +147,20 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   }
 
   const handleTrade = (key) => {
-    setFormData((prev) => {
-      const nextTrade = { ...prev.trade, [key]: !prev.trade[key] }
-      return { ...prev, trade: nextTrade }
-    })
+    setFormData((prev) => ({
+      ...prev,
+      trade: { ...prev.trade, [key]: !prev.trade[key] },
+    }))
   }
 
-  // Multi-selects (subscription, additionalServices) using Select toggling
-  const handleMultiSelect = (field, value) => {
+  const toggleArrayValue = (field, value) => {
     setFormData((prev) => {
       const arr = prev[field] || []
       return {
         ...prev,
-        [field]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value],
+        [field]: arr.includes(value)
+          ? arr.filter((v) => v !== value)
+          : [...arr, value],
       }
     })
   }
@@ -176,7 +172,6 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       setErrors(newErrors)
       return
     }
-    setErrors({})
     if (!isView) onSubmit(formData)
   }
 
@@ -185,7 +180,6 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   // -------------------------------------------------------
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Edit toggle in view mode */}
       {mode !== "add" && isView && (
         <div className="flex justify-end">
           <Button
@@ -202,19 +196,19 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
       {/* Name */}
       <div className="grid gap-2">
-        <Label htmlFor="name">{t("name")} *</Label>
-        <Input id="name" name="name" value={formData.name} onChange={handleChange} disabled={isView} />
+        <Label>{t("name")} *</Label>
+        <Input name="name" value={formData.name} onChange={handleChange} disabled={isView} />
         {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
       </div>
 
       {/* Owner */}
       <div className="grid gap-2">
-        <Label htmlFor="owner">{t("owner")} *</Label>
-        <Input id="owner" name="owner" value={formData.owner} onChange={handleChange} disabled={isView} />
+        <Label>{t("owner")} *</Label>
+        <Input name="owner" value={formData.owner} onChange={handleChange} disabled={isView} />
         {errors.owner && <p className="text-red-500 text-sm">{errors.owner}</p>}
       </div>
 
-      {/* Primary Contact */}
+      {/* Contact */}
       <div className="grid gap-2">
         <Label>{t("primaryContact")} *</Label>
         <Input
@@ -235,7 +229,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         {errors.contactEmail && <p className="text-red-500 text-sm">{errors.contactEmail}</p>}
       </div>
 
-      {/* Type (radio) */}
+      {/* Type */}
       <div className="grid gap-2">
         <Label>{t("type")} *</Label>
         <RadioGroup
@@ -255,7 +249,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         {errors.type && <p className="text-red-500 text-sm">{errors.type}</p>}
       </div>
 
-      {/* Trade (multi checkbox) */}
+      {/* Trade */}
       <div className="grid gap-2">
         <Label>{t("trade")} *</Label>
         {["hvac", "plumbing", "electrical"].map((key) => (
@@ -271,73 +265,66 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         {errors.trade && <p className="text-red-500 text-sm">{errors.trade}</p>}
       </div>
 
-      {/* Subscription (multi-select via toggle) */}
+      {/* Subscription (checkbox group) */}
       <div className="grid gap-2">
         <Label>{t("subscription")}</Label>
-        <Select onValueChange={(val) => handleMultiSelect("subscription", val)} disabled={isView}>
-          <SelectTrigger>
-            <SelectValue placeholder={t("subscription")} />
-          </SelectTrigger>
-          <SelectContent>
-            {["Leadership", "Service", "Sales", "Office Staff", "Install"].map((opt) => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-sm text-muted-foreground">
-          {t("selected")}: {(formData.subscription || []).join(", ") || t("none")}
-        </p>
+        {subscriptionOptions.map((opt) => (
+          <div key={opt} className="flex items-center space-x-2">
+            <Checkbox
+              checked={formData.subscription.includes(opt)}
+              onCheckedChange={() => toggleArrayValue("subscription", opt)}
+              disabled={isView}
+            />
+            <Label>{opt}</Label>
+          </div>
+        ))}
       </div>
 
-      {/* Additional Services (multi-select via toggle) */}
+      {/* Additional Services (checkbox group) */}
       <div className="grid gap-2">
         <Label>{t("additionalServices")}</Label>
-        <Select onValueChange={(val) => handleMultiSelect("additionalServices", val)} disabled={isView}>
-          <SelectTrigger>
-            <SelectValue placeholder={t("additionalServices")} />
-          </SelectTrigger>
-          <SelectContent>
-            {["Onsite", "Career Mapping", "Onboarding Development"].map((opt) => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-sm text-muted-foreground">
-          {t("selected")}: {(formData.additionalServices || []).join(", ") || t("none")}
-        </p>
+        {serviceOptions.map((opt) => (
+          <div key={opt} className="flex items-center space-x-2">
+            <Checkbox
+              checked={formData.additionalServices.includes(opt)}
+              onCheckedChange={() => toggleArrayValue("additionalServices", opt)}
+              disabled={isView}
+            />
+            <Label>{opt}</Label>
+          </div>
+        ))}
       </div>
 
-      {/* Coach / Salesman / Success Manager (single-selects) */}
+      {/* Coach / Salesman / Success Manager */}
       {[
         ["coach", t("coachLabel"), coachOptions],
         ["salesman", t("salesman"), salesmanOptions],
         ["successManager", t("successManager"), successManagerOptions],
       ].map(([name, label, options]) => (
         <div key={name} className="grid gap-2">
-          <Label htmlFor={name}>{label} *</Label>
-          <Select
+          <Label>{label} *</Label>
+          <select
+            name={name}
+            className="border rounded-md p-2"
             value={formData[name]}
-            onValueChange={(val) => setFormData((prev) => ({ ...prev, [name]: val }))}
+            onChange={handleChange}
             disabled={isView}
           >
-            <SelectTrigger>
-              <SelectValue placeholder={label} />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">{t("selectOption")}</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
           {errors[name] && <p className="text-red-500 text-sm">{errors[name]}</p>}
         </div>
       ))}
 
-      {/* Training Kickoff & Onsite Day (dates) */}
+      {/* Dates */}
       <div className="grid gap-2">
-        <Label htmlFor="kickoffDay">{t("trainingKickoffDay")}</Label>
+        <Label>{t("trainingKickoffDay")}</Label>
         <Input
-          id="kickoffDay"
           type="date"
           name="kickoffDay"
           value={formData.kickoffDay}
@@ -345,11 +332,9 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
           disabled={isView}
         />
       </div>
-
       <div className="grid gap-2">
-        <Label htmlFor="onsiteDay">{t("onsiteDay")}</Label>
+        <Label>{t("onsiteDay")}</Label>
         <Input
-          id="onsiteDay"
           type="date"
           name="onsiteDay"
           value={formData.onsiteDay}
@@ -360,9 +345,8 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
       {/* Revenue */}
       <div className="grid gap-2">
-        <Label htmlFor="revenue">{t("revenue")} *</Label>
+        <Label>{t("revenue")} *</Label>
         <Input
-          id="revenue"
           type="number"
           name="revenue"
           value={formData.revenue}
@@ -372,7 +356,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         {errors.revenue && <p className="text-red-500 text-sm">{errors.revenue}</p>}
       </div>
 
-      {/* PDF drag & drop */}
+      {/* Quote PDF */}
       <div className="grid gap-2">
         <Label>{t("quotePdf")}</Label>
         <div
@@ -399,7 +383,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         {errors.quote && <p className="text-red-500 text-sm">{errors.quote}</p>}
       </div>
 
-      {/* Image drag & drop */}
+      {/* Company Logo */}
       <div className="grid gap-2">
         <Label>{t("companyLogo")}</Label>
         <div

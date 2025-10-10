@@ -81,6 +81,7 @@ i18n.use(initReactI18next).init({
         companyLogo: "Company Logo",
         dragOrClickImage: "Drag & drop an image here, or click to upload",
         dragOrClickPdf: "Drag & drop a PDF file here, or click to upload",
+        selectOption:"Select Option",
         //form errors
         
   requiredName: "Please enter the company name.",
@@ -175,6 +176,7 @@ i18n.use(initReactI18next).init({
         companyLogo: "Logotipo de la Empresa",
         dragOrClickImage: "Arrastra y suelta una imagen aquí o haz clic para subirla",
         dragOrClickPdf: "Arrastra y suelta un archivo PDF aquí o haz clic para subirlo",
+        selectOption:"Seleciona una Opcion",
         //form errors
         
   requiredName: "Por favor, ingresa el nombre de la empresa.",
