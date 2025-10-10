@@ -165,15 +165,76 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    const newErrors = validateAll()
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
+  const handleSubmit = async (e) => {
+  e.preventDefault()
+
+  const newErrors = validateAll()
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors)
+    return
+  }
+
+  // Build FormData to send files + text
+  const formDataToSend = new FormData()
+
+  // ✅ Append all text fields
+  Object.entries(formData).forEach(([key, value]) => {
+    if (key === "trade" || key === "subscription" || key === "additionalServices") {
+      formDataToSend.append(key, JSON.stringify(value))
+    } else if (key !== "quote" && key !== "logo") {
+      formDataToSend.append(key, value ?? "")
+    }
+  })
+
+  // ✅ Append files if available
+  if (formData.quote) formDataToSend.append("quote", formData.quote)
+  if (formData.logo) formDataToSend.append("companyLogo", formData.logo)
+
+  try {
+    const response = await fetch("http://localhost:5000/api/companies", {
+      method: "POST",
+      body: formDataToSend,
+    })
+
+    if (!response.ok) {
+      const err = await response.json()
+      console.error("Error creating company:", err)
+      alert("❌ Error creating company: " + err.message)
       return
     }
-    if (!isView) onSubmit(formData)
+
+    const result = await response.json()
+    console.log("✅ Company created:", result)
+    alert("✅ Company added successfully!")
+
+    // reset form
+    setFormData({
+      name: "",
+      owner: "",
+      contactPhone: "",
+      contactEmail: "",
+      type: "",
+      trade: { hvac: false, plumbing: false, electrical: false },
+      quote: null,
+      logo: null,
+      subscription: [],
+      additionalServices: [],
+      coach: "",
+      salesman: "",
+      successManager: "",
+      kickoffDay: "",
+      onsiteDay: "",
+      revenue: "",
+    })
+
+    // Optionally close dialog if you pass onClose or refresh parent list
+    // onClose?.()
+  } catch (error) {
+    console.error("Error submitting form:", error)
+    alert("❌ Network error submitting form")
   }
+}
+
 
   // -------------------------------------------------------
   // UI
