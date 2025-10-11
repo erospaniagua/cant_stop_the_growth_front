@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronUp, Plus, Eye, RefreshCw } from "lucide-react"
+import { ChevronDown, ChevronUp, Plus, Eye, RefreshCw ,Archive} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CompanyDialog } from "@/components/CompanyDialog"
 import { useTranslation } from "react-i18next"
@@ -21,20 +21,21 @@ export default function Companies() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [dialog, setDialog] = useState({ open: false, mode: "add", company: null })
+  const [showArchived, setShowArchived] = useState(false)
+
+  
 
   // ============================================
   // Fetch companies from backend
   // ============================================
-  const fetchCompanies = async () => {
+  const fetchCompanies = async (archived = false) => {
     try {
       setLoading(true)
-      const res = await fetch("http://localhost:5000/api/companies")
+      const res = await fetch(`http://localhost:5000/api/companies?archived=${archived}`)
       if (!res.ok) throw new Error("Failed to fetch companies")
       const data = await res.json()
       setCompanies(data)
-      setError(null)
     } catch (err) {
-      console.error("Error fetching companies:", err)
       setError("Failed to load companies")
     } finally {
       setLoading(false)
@@ -43,8 +44,8 @@ export default function Companies() {
 
   // Fetch on mount
   useEffect(() => {
-    fetchCompanies()
-  }, [])
+    fetchCompanies(showArchived)
+  }, [showArchived])
 
   // ============================================
   // Handlers
@@ -58,6 +59,25 @@ export default function Companies() {
     await fetchCompanies()
     setRefreshing(false)
   }
+
+  const handleArchive = async (id, archived) => {
+  if (!window.confirm(`Are you sure you want to ${archived ? "archive" : "unarchive"} this company?`)) return
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/companies/${id}/archive`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    })
+
+    if (!res.ok) throw new Error("Failed to update archive status")
+
+    await fetchCompanies() // refresh list
+  } catch (error) {
+    console.error(error)
+    alert("❌ Failed to update archive status")
+  }
+}
 
   const handleAdd = () => {
     setDialog({ open: true, mode: "add", company: null })
@@ -121,7 +141,24 @@ export default function Companies() {
           </Button>
         </div>
       </div>
-
+        <div className="flex gap-4 border-b mb-4">
+      <button
+        className={`pb-2 ${
+          !showArchived ? "border-b-2 border-primary font-semibold" : ""
+        }`}
+        onClick={() => setShowArchived(false)}
+      >
+        Active
+      </button>
+      <button
+        className={`pb-2 ${
+          showArchived ? "border-b-2 border-primary font-semibold" : ""
+        }`}
+        onClick={() => setShowArchived(true)}
+      >
+        Archived
+      </button>
+    </div>
       {/* Companies Table */}
       <Table>
         <TableHeader>
@@ -156,6 +193,15 @@ export default function Companies() {
                 <TableCell>{company.coach}</TableCell>
                 <TableCell>{company.salesman}</TableCell>
                 <TableCell className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleArchive(company._id, !company.archived)}
+                    title={company.archived ? "Unarchive" : "Archive"}
+                    >
+                   <Archive className="h-4 w-4" />
+                  </Button>
+
                   <Button
                     variant="outline"
                     size="icon"
