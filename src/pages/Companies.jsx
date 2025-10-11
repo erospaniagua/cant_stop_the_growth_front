@@ -1,5 +1,4 @@
-import React, { useState } from "react"
-
+import React, { useState, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -9,57 +8,55 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import {
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Eye,
-  RefreshCw,
-} from "lucide-react"
+import { ChevronDown, ChevronUp, Plus, Eye, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CompanyDialog } from "@/components/CompanyDialog"
 import { useTranslation } from "react-i18next"
 
 export default function Companies() {
   const { t } = useTranslation()
+  const [companies, setCompanies] = useState([])
   const [expandedRow, setExpandedRow] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [dialog, setDialog] = useState({ open: false, mode: "add", company: null })
 
-  // Demo data
-  const [companies, setCompanies] = useState([
-    {
-      id: 1,
-      name: "Eros Inc.",
-      manager: "Eros",
-      teamSize: 200,
-      revenue: 1000000,
-      trade: "Trade",
-      coach: "Danny",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Juan Corp.",
-      manager: "Carlos",
-      teamSize: 100,
-      revenue: 200000,
-      trade: "HVAC",
-      coach: "Maria",
-      status: "Inactive",
-    },
-  ])
+  // ============================================
+  // Fetch companies from backend
+  // ============================================
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch("http://localhost:5000/api/companies")
+      if (!res.ok) throw new Error("Failed to fetch companies")
+      const data = await res.json()
+      setCompanies(data)
+      setError(null)
+    } catch (err) {
+      console.error("Error fetching companies:", err)
+      setError("Failed to load companies")
+    } finally {
+      setLoading(false)
+    }
+  }
 
+  // Fetch on mount
+  useEffect(() => {
+    fetchCompanies()
+  }, [])
+
+  // ============================================
+  // Handlers
+  // ============================================
   const toggleExpand = (id) => {
     setExpandedRow(expandedRow === id ? null : id)
   }
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true)
-    setTimeout(() => {
-      setRefreshing(false)
-      console.log("Refreshed data!") // simulate API call
-    }, 800)
+    await fetchCompanies()
+    setRefreshing(false)
   }
 
   const handleAdd = () => {
@@ -70,18 +67,29 @@ export default function Companies() {
     setDialog({ open: true, mode: "view", company })
   }
 
-  const handleSubmit = (newData) => {
-    if (dialog.mode === "add") {
-      setCompanies([...companies, { id: Date.now(), ...newData }])
-    } else if (dialog.mode === "edit") {
-      setCompanies(
-        companies.map((c) =>
-          c.id === dialog.company.id ? { ...c, ...newData } : c
-        )
-      )
-    }
+  const handleSubmit = async () => {
+    // after adding/editing, refresh the list
+    await fetchCompanies()
     setDialog({ ...dialog, open: false })
   }
+
+  // ============================================
+  // UI
+  // ============================================
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-muted-foreground">{t("loading")}...</p>
+      </div>
+    )
+
+  if (error)
+    return (
+      <div className="flex flex-col justify-center items-center h-64 text-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button onClick={fetchCompanies}>{t("retry")}</Button>
+      </div>
+    )
 
   return (
     <div className="space-y-6 relative">
@@ -119,27 +127,34 @@ export default function Companies() {
         <TableHeader>
           <TableRow>
             <TableHead>{t("name")}</TableHead>
-            <TableHead>{t("manager")}</TableHead>
-            <TableHead>{t("teamSize")}</TableHead>
+            <TableHead>{t("owner")}</TableHead>
+            <TableHead>{t("contactEmail")}</TableHead>
             <TableHead>{t("revenue")}</TableHead>
             <TableHead>{t("trade")}</TableHead>
             <TableHead>{t("coach")}</TableHead>
-            <TableHead>{t("status")}</TableHead>
+            <TableHead>{t("salesman")}</TableHead>
             <TableHead className="w-[120px]"></TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {companies.map((company) => (
-            <React.Fragment key={company.id}>
+            <React.Fragment key={company._id}>
               <TableRow>
                 <TableCell>{company.name}</TableCell>
-                <TableCell>{company.manager}</TableCell>
-                <TableCell>{company.teamSize}</TableCell>
-                <TableCell>${company.revenue.toLocaleString()}</TableCell>
-                <TableCell>{company.trade}</TableCell>
+                <TableCell>{company.owner}</TableCell>
+                <TableCell>{company.contactEmail}</TableCell>
+                <TableCell>
+                  ${Number(company.revenue).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  {Object.entries(company.trade || {})
+                    .filter(([_, val]) => val)
+                    .map(([key]) => key.toUpperCase())
+                    .join(", ") || "—"}
+                </TableCell>
                 <TableCell>{company.coach}</TableCell>
-                <TableCell>{company.status}</TableCell>
+                <TableCell>{company.salesman}</TableCell>
                 <TableCell className="flex gap-2">
                   <Button
                     variant="outline"
@@ -153,10 +168,10 @@ export default function Companies() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => toggleExpand(company.id)}
+                    onClick={() => toggleExpand(company._id)}
                     title={t("expand")}
                   >
-                    {expandedRow === company.id ? (
+                    {expandedRow === company._id ? (
                       <ChevronUp className="h-4 w-4" />
                     ) : (
                       <ChevronDown className="h-4 w-4" />
@@ -166,7 +181,7 @@ export default function Companies() {
               </TableRow>
 
               {/* Expanded quick actions */}
-              {expandedRow === company.id && (
+              {expandedRow === company._id && (
                 <>
                   <TableRow className="bg-muted/30">
                     <TableCell colSpan={8}>
@@ -183,55 +198,6 @@ export default function Companies() {
                       </div>
                     </TableCell>
                   </TableRow>
-
-                  <TableRow className="bg-muted/30">
-                    <TableCell colSpan={8}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{t("managers")}</span>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="w-32">
-                            {t("addManager")}
-                          </Button>
-                          <Button size="sm" variant="outline" className="w-32">
-                            {t("assignClass")}
-                          </Button>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow className="bg-muted/30">
-                    <TableCell colSpan={8}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{t("coach")}</span>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="w-32">
-                            {t("addCoach")}
-                          </Button>
-                          <Button size="sm" variant="outline" className="w-32">
-                            {t("assignCoach")}
-                          </Button>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow className="bg-muted/30">
-                    <TableCell colSpan={8}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{t("access")}</span>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="w-32">
-                            {t("addAccess")}
-                          </Button>
-                          <Button size="sm" variant="outline" className="w-32">
-                            {t("assignAccess")}
-                          </Button>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
                   <TableRow className="bg-muted/30">
                     <TableCell colSpan={8}>
                       <div className="flex items-center justify-between">

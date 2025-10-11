@@ -25,7 +25,6 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   const coachOptions = ["Danny Vega", "Alice Parker", "Tomás Aguilar"]
   const salesmanOptions = ["Sofia Ramirez", "Liam Cohen", "Alex Wang"]
   const successManagerOptions = ["Elena Cruz", "Miguel Torres", "Ryan Lee"]
-
   const subscriptionOptions = ["Leadership", "Service", "Sales", "Office Staff", "Install"]
   const serviceOptions = ["Onsite", "Career Mapping", "Onboarding Development"]
 
@@ -50,6 +49,9 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
   const [errors, setErrors] = useState({})
   const [isView, setIsView] = useState(mode === "view")
+  const [currentMode, setCurrentMode] = useState(mode)
+
+  
 
   useEffect(() => {
     if (data) {
@@ -100,13 +102,6 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       case "revenue":
         if (!value) return t("requiredRevenue")
         if (Number(value) <= 0) return t("invalidRevenue")
-        break
-      case "quote":
-        if (value && value.type !== "application/pdf") return t("invalidPdf")
-        break
-      case "logo":
-        if (value && !String(value.type || "").startsWith("image/"))
-          return t("invalidImage")
         break
       default:
         return ""
@@ -166,75 +161,97 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   }
 
   const handleSubmit = async (e) => {
-  e.preventDefault()
+  e.preventDefault();
 
-  const newErrors = validateAll()
+  const newErrors = validateAll();
   if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors)
-    return
+    setErrors(newErrors);
+    return;
   }
 
-  // Build FormData to send files + text
-  const formDataToSend = new FormData()
-
-  // ✅ Append all text fields
+  // Build form data
+  const formDataToSend = new FormData();
   Object.entries(formData).forEach(([key, value]) => {
-    if (key === "trade" || key === "subscription" || key === "additionalServices") {
-      formDataToSend.append(key, JSON.stringify(value))
+    if (["trade", "subscription", "additionalServices"].includes(key)) {
+      formDataToSend.append(key, JSON.stringify(value));
     } else if (key !== "quote" && key !== "logo") {
-      formDataToSend.append(key, value ?? "")
+      formDataToSend.append(key, value ?? "");
     }
-  })
+  });
 
-  // ✅ Append files if available
-  if (formData.quote) formDataToSend.append("quote", formData.quote)
-  if (formData.logo) formDataToSend.append("companyLogo", formData.logo)
+  if (formData.quote) formDataToSend.append("quote", formData.quote);
+  if (formData.logo) formDataToSend.append("companyLogo", formData.logo);
+
+  // ✅ Use PUT when editing
+  const companyId = data?._id || formData?._id;
+const isEdit = currentMode === "edit" && companyId;
+
+const url = isEdit
+  ? `http://localhost:5000/api/companies/${companyId}`
+  : "http://localhost:5000/api/companies";
+
+const method = isEdit ? "PUT" : "POST";
+
+console.log("Submitting in mode:", currentMode, "→", method, url);
 
   try {
-    const response = await fetch("http://localhost:5000/api/companies", {
-      method: "POST",
+    const response = await fetch(url, {
+      method,
       body: formDataToSend,
-    })
+    });
 
     if (!response.ok) {
-      const err = await response.json()
-      console.error("Error creating company:", err)
-      alert("❌ Error creating company: " + err.message)
-      return
+      const err = await response.json();
+      alert("❌ " + err.message);
+      return;
     }
 
-    const result = await response.json()
-    console.log("✅ Company created:", result)
-    alert("✅ Company added successfully!")
+    const result = await response.json();
+    alert(
+      mode === "edit"
+        ? "✅ " + t("companyUpdatedSuccess")
+        : "✅ " + t("companyAddedSuccess")
+    );
 
-    // reset form
-    setFormData({
-      name: "",
-      owner: "",
-      contactPhone: "",
-      contactEmail: "",
-      type: "",
-      trade: { hvac: false, plumbing: false, electrical: false },
-      quote: null,
-      logo: null,
-      subscription: [],
-      additionalServices: [],
-      coach: "",
-      salesman: "",
-      successManager: "",
-      kickoffDay: "",
-      onsiteDay: "",
-      revenue: "",
-    })
+    // Reset form (optional for edit)
+    if (mode === "add") {
+      setFormData({
+        name: "",
+        owner: "",
+        contactPhone: "",
+        contactEmail: "",
+        type: "",
+        trade: { hvac: false, plumbing: false, electrical: false },
+        subscription: [],
+        additionalServices: [],
+        coach: "",
+        salesman: "",
+        successManager: "",
+        kickoffDay: "",
+        onsiteDay: "",
+        revenue: "",
+        quote: null,
+        logo: null,
+      });
+    }
 
-    // Optionally close dialog if you pass onClose or refresh parent list
-    // onClose?.()
+    onSubmit?.(result); // let parent refresh the table
   } catch (error) {
-    console.error("Error submitting form:", error)
-    alert("❌ Network error submitting form")
+    console.error("Error submitting form:", error);
+    alert("❌ Network error");
   }
-}
+};
 
+
+  // -------------------------------------------------------
+  // File preview helpers
+  // -------------------------------------------------------
+  const getFileUrl = (file) => {
+    if (!file) return ""
+    if (file instanceof File) return URL.createObjectURL(file)
+    if (file.startsWith("http")) return file
+    return `http://localhost:5000/${file}`
+  }
 
   // -------------------------------------------------------
   // UI
@@ -247,29 +264,27 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
             variant="ghost"
             size="icon"
             type="button"
-            onClick={() => setIsView(false)}
-            title={t("editCompany")}
+            onClick={() => {setIsView(false)
+                            setCurrentMode("edit")}}
           >
             <Pencil className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Name */}
+      {/* Basic Info */}
       <div className="grid gap-2">
         <Label>{t("name")} *</Label>
         <Input name="name" value={formData.name} onChange={handleChange} disabled={isView} />
         {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
       </div>
 
-      {/* Owner */}
       <div className="grid gap-2">
         <Label>{t("owner")} *</Label>
         <Input name="owner" value={formData.owner} onChange={handleChange} disabled={isView} />
         {errors.owner && <p className="text-red-500 text-sm">{errors.owner}</p>}
       </div>
 
-      {/* Contact */}
       <div className="grid gap-2">
         <Label>{t("primaryContact")} *</Label>
         <Input
@@ -295,7 +310,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         <Label>{t("type")} *</Label>
         <RadioGroup
           value={formData.type}
-          onValueChange={(val) => setFormData((prev) => ({ ...prev, type: val }))}
+          onValueChange={(val) => setFormData((p) => ({ ...p, type: val }))}
           disabled={isView}
         >
           <div className="flex items-center space-x-2">
@@ -313,20 +328,20 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       {/* Trade */}
       <div className="grid gap-2">
         <Label>{t("trade")} *</Label>
-        {["hvac", "plumbing", "electrical"].map((key) => (
-          <div key={key} className="flex items-center space-x-2">
+        {["hvac", "plumbing", "electrical"].map((k) => (
+          <div key={k} className="flex items-center space-x-2">
             <Checkbox
-              checked={!!formData.trade[key]}
-              onCheckedChange={() => handleTrade(key)}
+              checked={!!formData.trade[k]}
+              onCheckedChange={() => handleTrade(k)}
               disabled={isView}
             />
-            <Label className="capitalize">{t(key)}</Label>
+            <Label className="capitalize">{t(k)}</Label>
           </div>
         ))}
         {errors.trade && <p className="text-red-500 text-sm">{errors.trade}</p>}
       </div>
 
-      {/* Subscription (checkbox group) */}
+      {/* Subscription */}
       <div className="grid gap-2">
         <Label>{t("subscription")}</Label>
         {subscriptionOptions.map((opt) => (
@@ -341,7 +356,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         ))}
       </div>
 
-      {/* Additional Services (checkbox group) */}
+      {/* Additional Services */}
       <div className="grid gap-2">
         <Label>{t("additionalServices")}</Label>
         {serviceOptions.map((opt) => (
@@ -356,12 +371,12 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         ))}
       </div>
 
-      {/* Coach / Salesman / Success Manager */}
+      {/* Select fields */}
       {[
         ["coach", t("coachLabel"), coachOptions],
         ["salesman", t("salesman"), salesmanOptions],
         ["successManager", t("successManager"), successManagerOptions],
-      ].map(([name, label, options]) => (
+      ].map(([name, label, opts]) => (
         <div key={name} className="grid gap-2">
           <Label>{label} *</Label>
           <select
@@ -372,9 +387,9 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
             disabled={isView}
           >
             <option value="">{t("selectOption")}</option>
-            {options.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+            {opts.map((o) => (
+              <option key={o} value={o}>
+                {o}
               </option>
             ))}
           </select>
@@ -382,104 +397,88 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         </div>
       ))}
 
-      {/* Dates */}
+      {/* Dates + Revenue */}
       <div className="grid gap-2">
         <Label>{t("trainingKickoffDay")}</Label>
-        <Input
-          type="date"
-          name="kickoffDay"
-          value={formData.kickoffDay}
-          onChange={handleChange}
-          disabled={isView}
-        />
+        <Input type="date" name="kickoffDay" value={formData.kickoffDay} onChange={handleChange} disabled={isView} />
       </div>
       <div className="grid gap-2">
         <Label>{t("onsiteDay")}</Label>
-        <Input
-          type="date"
-          name="onsiteDay"
-          value={formData.onsiteDay}
-          onChange={handleChange}
-          disabled={isView}
-        />
+        <Input type="date" name="onsiteDay" value={formData.onsiteDay} onChange={handleChange} disabled={isView} />
       </div>
-
-      {/* Revenue */}
       <div className="grid gap-2">
         <Label>{t("revenue")} *</Label>
-        <Input
-          type="number"
-          name="revenue"
-          value={formData.revenue}
-          onChange={handleChange}
-          disabled={isView}
-        />
+        <Input type="number" name="revenue" value={formData.revenue} onChange={handleChange} disabled={isView} />
         {errors.revenue && <p className="text-red-500 text-sm">{errors.revenue}</p>}
       </div>
 
       {/* Quote PDF */}
       <div className="grid gap-2">
         <Label>{t("quotePdf")}</Label>
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, "quote")}
-          onClick={() => !isView && fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary transition ${
-            isView ? "opacity-60 cursor-not-allowed" : ""
-          }`}
-        >
-          <Upload className="mx-auto mb-2 h-5 w-5 opacity-60" />
-          <p className="text-sm text-muted-foreground">
-            {formData.quote ? formData.quote.name : t("dragOrClickPdf")}
-          </p>
-          <input
-            type="file"
-            accept="application/pdf"
-            ref={fileInputRef}
-            onChange={(e) => handleFileSelect(e, "quote")}
-            className="hidden"
-            disabled={isView}
-          />
-        </div>
-        {errors.quote && <p className="text-red-500 text-sm">{errors.quote}</p>}
+        {isView && formData.quote && (
+          <a
+            href={getFileUrl(formData.quote)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline text-sm"
+          >
+            📄 {t("viewQuotePdf")}
+          </a>
+        )}
+        {!isView && (
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, "quote")}
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary transition"
+          >
+            <Upload className="mx-auto mb-2 h-5 w-5 opacity-60" />
+            <p className="text-sm text-muted-foreground">
+              {formData.quote ? formData.quote.name : t("dragOrClickPdf")}
+            </p>
+            <input
+              type="file"
+              accept="application/pdf"
+              ref={fileInputRef}
+              onChange={(e) => handleFileSelect(e, "quote")}
+              className="hidden"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Company Logo */}
+      {/* Logo */}
       <div className="grid gap-2">
         <Label>{t("companyLogo")}</Label>
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, "logo")}
-          onClick={() => !isView && logoInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary transition ${
-            isView ? "opacity-60 cursor-not-allowed" : ""
-          }`}
-        >
-          <Upload className="mx-auto mb-2 h-5 w-5 opacity-60" />
-          {formData.logo ? (
-            <div className="flex flex-col items-center">
-              <img
-                src={URL.createObjectURL(formData.logo)}
-                alt="Logo preview"
-                className="h-16 object-contain mb-2"
-              />
-              <p className="text-sm text-muted-foreground">{formData.logo.name}</p>
-            </div>
-          ) : (
+        {isView && formData.logo && (
+          <a href={getFileUrl(formData.logo)} target="_blank" rel="noopener noreferrer">
+            <img
+              src={getFileUrl(formData.logo)}
+              alt="Company logo"
+              className="h-16 object-contain mb-2 border rounded-md"
+            />
+          </a>
+        )}
+        {!isView && (
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, "logo")}
+            onClick={() => logoInputRef.current?.click()}
+            className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary transition"
+          >
+            <Upload className="mx-auto mb-2 h-5 w-5 opacity-60" />
             <p className="text-sm text-muted-foreground">
-              {t("dragOrClickImage")}
+              {formData.logo ? formData.logo.name : t("dragOrClickImage")}
             </p>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            ref={logoInputRef}
-            onChange={(e) => handleFileSelect(e, "logo")}
-            className="hidden"
-            disabled={isView}
-          />
-        </div>
-        {errors.logo && <p className="text-red-500 text-sm">{errors.logo}</p>}
+            <input
+              type="file"
+              accept="image/*"
+              ref={logoInputRef}
+              onChange={(e) => handleFileSelect(e, "logo")}
+              className="hidden"
+            />
+          </div>
+        )}
       </div>
 
       {!isView && (
