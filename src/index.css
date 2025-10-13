@@ -7,6 +7,8 @@
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
+    --topbar-background: 349.4 73.3% 42.5%;
+
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
 
@@ -35,8 +37,8 @@
     --radius: 0.5rem;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-background: 202.8 100% 13.9%;
+    --sidebar-foreground: 30 100% 99.6%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
@@ -49,6 +51,8 @@
   .dark {
     --background: 0 0% 0%;      
     --foreground: 0 0% 98%;
+
+    --topbar-background: 240 5.9% 10%;
 
     --card: 224 71% 4%;
     --card-foreground: 213 31% 91%;

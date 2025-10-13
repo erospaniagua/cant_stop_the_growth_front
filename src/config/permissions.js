@@ -37,5 +37,7 @@ export const permissions = {
       editCourse: false,
       changeLanguage: true,
     },
+    
   },
+  "team-manager": { routes: ["/managers", "/settings"] }
 }

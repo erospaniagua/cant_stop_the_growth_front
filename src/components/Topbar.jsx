@@ -3,7 +3,7 @@ import { ModeToggle } from "@/components/ModeToggle"
 
 export default function Topbar() {
   return (
-    <header className="flex items-center justify-between border-b px-4 h-14 bg-background">
+    <header className="flex items-center justify-between border-b px-4 h-14 bg-[hsl(var(--topbar-background))]">
       {/* Left side: sidebar toggle */}
       <SidebarTrigger />
 

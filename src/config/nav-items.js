@@ -1,5 +1,5 @@
 // src/config/nav-items.js
-import { Home, Users, GraduationCap, Settings, BookOpen, Building2, BarChart } from "lucide-react"
+import { Home, Users, GraduationCap, Settings, BookOpen, Building2, BarChart,LayoutDashboard } from "lucide-react"
 
 export const navItems = {
   admin: [
@@ -23,5 +23,9 @@ export const navItems = {
   company: [
     { title: "courses", href: "/courses", icon: GraduationCap },
     { title: "settings", href: "/settings", icon: Settings }
+  ],
+  "team-manager": [
+    { title: "Dashboard", href: "/managers", icon: LayoutDashboard },
+    { title: "Settings", href: "/settings", icon: Settings }
   ],
 }
