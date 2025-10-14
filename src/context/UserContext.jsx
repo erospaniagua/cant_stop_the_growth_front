@@ -7,16 +7,19 @@ export const UserProvider = ({ children }) => {
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // 🧠 Load from localStorage on startup
   useEffect(() => {
-    const savedUser = localStorage.getItem("user")
-    const savedToken = localStorage.getItem("token")
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser))
-      setToken(savedToken)
+    const storedUser = localStorage.getItem("user")
+    const storedToken = localStorage.getItem("token")
+
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser))
+      setToken(storedToken)
     }
     setLoading(false)
   }, [])
 
+  // 🧩 Login
   const login = async (email, password) => {
     const res = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
@@ -27,13 +30,16 @@ export const UserProvider = ({ children }) => {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || "Login failed")
 
+    // 🧠 Save token + user to context and localStorage
     setUser(data.user)
     setToken(data.token)
     localStorage.setItem("user", JSON.stringify(data.user))
     localStorage.setItem("token", data.token)
+
     return data.user
   }
 
+  // 🚪 Logout
   const logout = () => {
     setUser(null)
     setToken(null)
@@ -42,7 +48,7 @@ export const UserProvider = ({ children }) => {
   }
 
   return (
-    <UserContext.Provider value={{ user, token, loading, login, logout }}>
+    <UserContext.Provider value={{ user, token, login, logout, loading }}>
       {children}
     </UserContext.Provider>
   )

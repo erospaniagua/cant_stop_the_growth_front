@@ -7,7 +7,8 @@ import Coaches from "@/pages/Coaches"
 import Students from "@/pages/Students"
 import Analytics from "@/pages/Analytics"
 import Settings from "@/pages/Settings"
-import Login from "@/pages/Login" // 👈 add this
+import Login from "@/pages/Login" 
+import Users from "./pages/Users"
 import ProtectedRoute from "@/components/ProtectedRoute"
 
 function App() {
@@ -22,6 +23,10 @@ function App() {
           <Route
             path="/"
             element={<ProtectedRoute path="/" element={<Dashboard />} />}
+          />
+          <Route
+            path="/admin/users"
+            element={<ProtectedRoute path="/admin/users" element={<Users />} />}
           />
           <Route
             path="/companies"

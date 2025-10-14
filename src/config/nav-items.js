@@ -9,6 +9,7 @@ export const navItems = {
     { title: "courses", href: "/courses", icon: BookOpen },
     { title: "students", href: "/students", icon: GraduationCap },
     { title: "analytics", href: "/analytics", icon: BarChart },
+    { title: "Users", href: "/admin/users", icon: Users },
     { title: "settings", href: "/settings", icon: Settings },
   ],
   coach: [

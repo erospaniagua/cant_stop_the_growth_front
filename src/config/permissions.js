@@ -1,7 +1,7 @@
 // src/config/permissions.js
 export const permissions = {
   admin: {
-    routes: ["/", "/companies", "/coaches", "/courses", "/students", "/analytics", "/settings"],
+    routes: ["/", "/companies", "/coaches", "/courses", "/students", "/analytics", "/settings","/admin/users"],
     can: {
       addCompany: true,
       addCourse: true,
