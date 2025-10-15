@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@/context/UserContext"
 import { Button } from "@/components/ui/button"
-import { Plus, Archive, RotateCcw } from "lucide-react"
+import { Plus } from "lucide-react"
 import UserDialog from "@/components/UserDialog"
 
 export default function Users() {
-  
   const { token } = useUser()
   const [users, setUsers] = useState([])
   const [showArchived, setShowArchived] = useState(false)
@@ -41,27 +40,6 @@ export default function Users() {
   const handleOpen = (user) => {
     setSelectedUser(user)
     setOpenDialog(true)
-  }
-
-  // 🧩 Toggle archive / restore
-  const handleToggleArchive = async (userId) => {
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/users/${userId}/archive`,
-        {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      )
-      const data = await res.json()
-      if (res.ok) {
-        fetchUsers(showArchived)
-      } else {
-        alert(data.message)
-      }
-    } catch (err) {
-      console.error("Error toggling archive:", err)
-    }
   }
 
   return (
@@ -106,13 +84,10 @@ export default function Users() {
         {users.map((u) => (
           <div
             key={u._id}
-            className="p-4 hover:bg-muted flex justify-between items-center transition"
+            className="p-4 hover:bg-muted flex justify-between items-center transition cursor-pointer"
+            onClick={() => handleOpen(u)}
           >
-            {/* User info */}
-            <div
-              className="cursor-pointer flex-1"
-              onClick={() => handleOpen(u)}
-            >
+            <div>
               <p className="font-medium">{u.name}</p>
               <p className="text-sm text-muted-foreground">
                 {u.role} · {u.email}
@@ -123,20 +98,6 @@ export default function Users() {
                 </p>
               )}
             </div>
-
-            {/* Archive / Restore button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleToggleArchive(u._id)}
-              title={showArchived ? "Restore user" : "Archive user"}
-            >
-              {showArchived ? (
-                <RotateCcw className="h-4 w-4 text-green-500" />
-              ) : (
-                <Archive className="h-4 w-4 text-red-500" />
-              )}
-            </Button>
           </div>
         ))}
       </div>

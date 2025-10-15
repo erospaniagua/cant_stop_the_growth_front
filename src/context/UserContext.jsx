@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 
 const UserContext = createContext()
 
@@ -6,6 +7,7 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate() // 👈 add navigation hook
 
   // 🧠 Load from localStorage on startup
   useEffect(() => {
@@ -36,6 +38,13 @@ export const UserProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(data.user))
     localStorage.setItem("token", data.token)
 
+    // 🧭 Redirect logic
+    if (data.user.mustChangePassword) {
+      navigate("/settings", { replace: true })
+    } else {
+      navigate("/", { replace: true })
+    }
+
     return data.user
   }
 
@@ -45,6 +54,7 @@ export const UserProvider = ({ children }) => {
     setToken(null)
     localStorage.removeItem("user")
     localStorage.removeItem("token")
+    navigate("/login", { replace: true }) // 👈 optional redirect
   }
 
   return (

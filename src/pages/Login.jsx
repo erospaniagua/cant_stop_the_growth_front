@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useUser } from "@/context/UserContext"
+import BlueprintBackground from "@/components/BlueprintBackground"
 
 export default function Login() {
   const { login } = useUser()
@@ -13,13 +14,12 @@ export default function Login() {
     e.preventDefault()
     try {
       const user = await login(email, password)
-      // Redirect to first allowed route for that role
       const route = {
         admin: "/",
         coach: "/coaches",
         students: "/students",
         companies: "/companies",
-        "team-manager": "/managers"
+        "team-manager": "/managers",
       }[user.role] || "/"
       navigate(route)
     } catch (err) {
@@ -28,33 +28,47 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-md w-96">
-        <h2 className="text-2xl font-semibold mb-4 text-center">Login</h2>
-        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border rounded p-2 mb-3"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border rounded p-2 mb-3"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <button
-          type="submit"
-          className="w-full bg-primary text-white p-2 rounded hover:bg-primary/80"
-        >
-          Sign In
-        </button>
-      </form>
+    <div className="relative flex min-h-screen overflow-hidden text-white">
+      {/* Fullscreen animated blueprint background */}
+      <div className="absolute inset-0 z-0">
+        <BlueprintBackground />
+      </div>
+
+      {/* Left login panel */}
+      <div className="relative z-10 flex items-center justify-center w-[40%] min-w-[380px] px-10 bg-black/40 backdrop-blur-md">
+        <div className="w-full max-w-sm bg-white/5 p-8 rounded-2xl shadow-2xl border border-white/10">
+          <h2 className="text-3xl font-semibold mb-6 text-center">Sign In</h2>
+          {error && <p className="text-red-400 text-sm mb-3 text-center">{error}</p>}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="email"
+              placeholder="Email"
+              className="w-full px-4 py-2 rounded bg-white/10 border border-white/20 focus:outline-none focus:border-red-500 placeholder-white/70"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-full px-4 py-2 rounded bg-white/10 border border-white/20 focus:outline-none focus:border-red-500 placeholder-white/70"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="submit"
+              className="w-full bg-red-600 hover:bg-red-700 py-2 rounded font-medium transition-colors"
+            >
+              Sign In
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Right side – visible blueprint space */}
+      <div className="flex-1" />
     </div>
   )
 }

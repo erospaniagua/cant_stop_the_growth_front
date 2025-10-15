@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom"
 import { useUser } from "@/context/UserContext"
 import { permissions } from "@/config/permissions"
-import {jwtDecode} from "jwt-decode"
+import { jwtDecode } from "jwt-decode"
 
 export default function ProtectedRoute({ element, path }) {
   const { user, token, logout, loading } = useUser()
@@ -24,9 +24,13 @@ export default function ProtectedRoute({ element, path }) {
       return <Navigate to="/login" state={{ from: location }} replace />
     }
   } catch (err) {
-    // Invalid token (tampered or corrupted)
     logout?.()
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  // 🔒 Force password change before any other route
+  if (user.mustChangePassword && location.pathname !== "/settings") {
+    return <Navigate to="/settings" replace />
   }
 
   // 🧩 Role-based permission check (your existing logic)
