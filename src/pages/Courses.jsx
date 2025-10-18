@@ -3,6 +3,7 @@ import { apiClient } from "../api/client.js";
 import CourseDialog from "../components/CourseDialog.jsx";
 import CourseEditor from "@/components/CourseEditor.jsx";
 
+
 export default function CoursesAdminPage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -88,12 +89,14 @@ export default function CoursesAdminPage() {
       )}
 
       {dialogOpen && (
+        
         <CourseEditor
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}
           courseId={selectedCourse}
           refresh={fetchCourses}
         />
+        
       )}
     </div>
   );

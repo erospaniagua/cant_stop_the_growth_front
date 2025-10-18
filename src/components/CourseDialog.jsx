@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/client.js";
+import { ReactFlowProvider } from "reactflow";
 import CourseFlowBuilder from "./CourseFlowBuilder";
+
 
 export default function CourseDialog({ open, onClose, courseId, refresh }) {
   const [course, setCourse] = useState({ title: "", description: "", modules: [] });
@@ -66,10 +68,12 @@ export default function CourseDialog({ open, onClose, courseId, refresh }) {
 
           {/* Canvas */}
           <div className="border rounded-lg overflow-hidden w-full h-[700px] bg-neutral-50">
+            <ReactFlowProvider>
             <CourseFlowBuilder
               modules={course.modules}
               onChange={(mods) => setCourse({ ...course, modules: mods })}
             />
+            </ReactFlowProvider>
           </div>
         </div>
 

@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import ReactFlow, {
-  addEdge,
-  Background,
   Controls,
   MiniMap,
   Handle,
   Position,
   applyNodeChanges,
 } from "reactflow";
+import { useTheme } from "next-themes";
 import "reactflow/dist/style.css";
 
 /* -------------------- NODE COMPONENT -------------------- */
@@ -24,6 +23,7 @@ function NodeBox({ data, bg }) {
         minWidth: 140,
         position: "relative",
         cursor: "grab",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
       }}
     >
       <Handle type="target" position={Position.Left} style={{ background: "#fff" }} />
@@ -37,17 +37,16 @@ function NodeBox({ data, bg }) {
 const nodeTypes = {
   input: (props) => <NodeBox {...props} bg="#4F46E5" />,
   video: (props) => <NodeBox {...props} bg="#2563EB" />,
-  pdf:   (props) => <NodeBox {...props} bg="#059669" />,
-  quiz:  (props) => <NodeBox {...props} bg="#D97706" />,
-  cert:  (props) => <NodeBox {...props} bg="#7C3AED" />,
+  pdf: (props) => <NodeBox {...props} bg="#059669" />,
+  quiz: (props) => <NodeBox {...props} bg="#D97706" />,
+  cert: (props) => <NodeBox {...props} bg="#7C3AED" />,
 };
 
 /* ======================================================== */
-export default function CourseFlowBuilder({
-  modules = [],
-  onChange,
-  readOnly = false, // ✅ can disable drag and buttons
-}) {
+export default function CourseFlowBuilder({ modules = [], onChange, readOnly = false }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const [nodes, setNodes] = useState([
     {
       id: "start",
@@ -64,7 +63,7 @@ export default function CourseFlowBuilder({
     nodesRef.current = nodes;
   }, [nodes]);
 
-  /* --------------- Rebuild from existing modules, preserving positions --------------- */
+  /* --------------- Rebuild from existing modules --------------- */
   const buildFromModules = useCallback(() => {
     const existingStart = nodesRef.current.find((n) => n.id === "start");
     const base = [
@@ -92,16 +91,22 @@ export default function CourseFlowBuilder({
       source: n.id,
       target: all[i + 1].id,
       animated: true,
+      style: {
+        stroke: isDark
+          ? "rgba(229,231,235,0.4)"
+          : "rgba(255,255,255,0.4)",
+        strokeWidth: 0.75,
+      },
     }));
     setNodes(all);
     setEdges(newEdges);
-  }, [modules, readOnly]);
+  }, [modules, readOnly, isDark]);
 
   useEffect(() => {
     if (modules.length) buildFromModules();
   }, [modules, buildFromModules]);
 
-  /* --------------- Add or remove modules --------------- */
+  /* --------------- Add / Remove modules --------------- */
   const addModule = (type, title) => {
     if (readOnly) return;
     const id = crypto.randomUUID();
@@ -113,7 +118,18 @@ export default function CourseFlowBuilder({
       position: { x: last.position.x + 200, y: 150 },
       draggable: true,
     };
-    const newEdge = { id: `${last.id}-${id}`, source: last.id, target: id, animated: true };
+    const newEdge = {
+      id: `${last.id}-${id}`,
+      source: last.id,
+      target: id,
+      animated: true,
+      style: {
+        stroke: isDark
+          ? "rgba(229,231,235,0.4)"
+          : "rgba(255,255,255,0.4)",
+        strokeWidth: 0.75,
+      },
+    };
     const updatedNodes = [...nodes, newNode];
     const updatedEdges = [...edges, newEdge];
 
@@ -135,48 +151,62 @@ export default function CourseFlowBuilder({
     onChange?.(newNodes.filter((n) => n.id !== "start"));
   };
 
-  const handleNodeClick = (event, node) => {
-    if (readOnly) return;
-    console.log("Clicked node:", node);
-  };
-
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
     []
   );
 
+  /* -------------------- Blueprint Style -------------------- */
+  const bgColor = isDark ? "#1E1E1E" : "#1E3A8A";
+  const gridGap = 80;
+
   return (
-    <div
-      className="relative w-full h-[700px] border rounded-lg overflow-hidden bg-neutral-50"
-      tabIndex={0}
-    >
+    <div className="relative w-full h-full overflow-hidden" tabIndex={0}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
-        onNodeClick={handleNodeClick}
         fitView
         nodeTypes={nodeTypes}
-        panOnDrag={true}
+        panOnDrag
         panActivationKeyCode="Space"
         selectionKeyCode={null}
         zoomOnScroll
         zoomOnPinch
         selectNodesOnDrag={false}
-        panOnScroll={false}
         minZoom={0.5}
         maxZoom={1.5}
         snapToGrid
-        snapGrid={[25, 25]}
-        translateExtent={[[-800, -400], [3000, 1000]]} // 🧩 Wider workspace
-        defaultViewport={{ x: -100, y: 0, zoom: 0.8 }} // 🧭 starts zoomed out
+        snapGrid={[gridGap, gridGap]}
+        translateExtent={[[-800, -400], [3000, 1000]]}
+        defaultViewport={{ x: -100, y: 0, zoom: 0.8 }}
+        style={{
+          background: bgColor,
+          transition: "background 0.4s ease",
+        }}
       >
-        <MiniMap />
-        <Controls />
-        <Background variant="dots" gap={20} size={1.5} color="#ccc" />
+        {/* ✅ Custom Grid Overlay (inside the ReactFlow layer) */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `
+              linear-gradient(${isDark ? "rgba(229,231,235,0.08)" : "rgba(255,255,255,0.08)"} 1px, transparent 1px),
+              linear-gradient(90deg, ${isDark ? "rgba(229,231,235,0.08)" : "rgba(255,255,255,0.08)"} 1px, transparent 1px),
+              linear-gradient(${isDark ? "rgba(229,231,235,0.15)" : "rgba(255,255,255,0.15)"} 1px, transparent 1px),
+              linear-gradient(90deg, ${isDark ? "rgba(229,231,235,0.15)" : "rgba(255,255,255,0.15)"} 1px, transparent 1px)
+            `,
+            backgroundSize: "80px 80px, 80px 80px, 400px 400px, 400px 400px",
+            zIndex: 0,
+          }}
+        ></div>
+
+        <MiniMap
+          nodeColor={() => "#6366F1"}
+          maskColor="rgba(0,0,0,0.2)"
+        />
+        <Controls showInteractive={false} />
       </ReactFlow>
 
-      {/* 🧰 Toolbar (top-left) */}
       {!readOnly && (
         <div className="absolute top-4 left-4 flex flex-wrap gap-2 bg-neutral-900/80 backdrop-blur-md p-3 rounded-lg shadow-lg">
           <button
