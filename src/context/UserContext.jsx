@@ -57,8 +57,16 @@ export const UserProvider = ({ children }) => {
     navigate("/login", { replace: true }) // 👈 optional redirect
   }
 
+  const updateUser = (updatedFields) => {
+  setUser((prev) => {
+    const newUser = { ...prev, ...updatedFields }
+    localStorage.setItem("user", JSON.stringify(newUser))
+    return newUser
+  })
+}
+
   return (
-    <UserContext.Provider value={{ user, token, login, logout, loading }}>
+    <UserContext.Provider value={{ user, token, login, logout, updateUser, loading }}>
       {children}
     </UserContext.Provider>
   )

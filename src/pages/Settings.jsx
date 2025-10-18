@@ -1,18 +1,33 @@
-// src/pages/Settings.jsx
 import { useState } from "react"
-import { useUser } from "@/context/UserContext"
+import { useUser  } from "@/context/UserContext"
 import { useLanguage } from "@/context/LanguageContext"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
 
+// 🧩 Password validation helper
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
+
+function validatePassword(password) {
+  if (!password) return { ok: false, message: "Password is required" }
+  if (!PASSWORD_REGEX.test(password)) {
+    return {
+      ok: false,
+      message:
+        "Password must be at least 8 characters long, include at least one uppercase letter and one number.",
+    }
+  }
+  return { ok: true }
+}
+
 export default function Settings() {
-  const { user, token } = useUser()
+  const { user, token, updateUser } = useUser()
   const { language, toggleLanguage } = useLanguage()
   const { t, i18n } = useTranslation()
 
   const [oldPassword, setOldPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleToggle = () => {
@@ -33,6 +48,13 @@ export default function Settings() {
       return
     }
 
+    // 🔒 Validate strength
+    const { ok, message } = validatePassword(newPassword)
+    if (!ok) {
+      alert(message)
+      return
+    }
+
     try {
       setLoading(true)
       const res = await fetch("http://localhost:5000/api/users/change-password", {
@@ -46,6 +68,8 @@ export default function Settings() {
 
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || "Error updating password")
+
+      updateUser({ mustChangePassword: false })
 
       alert("Password updated successfully.")
       setOldPassword("")
@@ -87,32 +111,39 @@ export default function Settings() {
 
         <form onSubmit={handleChangePassword} className="space-y-3 max-w-md">
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Current password"
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
             className="border rounded p-2 w-full"
           />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="New password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             className="border rounded p-2 w-full"
           />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Confirm new password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="border rounded p-2 w-full"
           />
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2"
-          >
+          {/* Show password toggle */}
+          <label className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showPassword}
+              onChange={(e) => setShowPassword(e.target.checked)}
+              className="h-4 w-4 accent-red-500"
+            />
+            <span>Show passwords</span>
+          </label>
+
+          <Button type="submit" disabled={loading} className="w-full mt-2">
             {loading ? "Updating..." : "Change Password"}
           </Button>
         </form>

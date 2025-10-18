@@ -10,10 +10,41 @@ import { useState, useEffect } from "react"
 import { useUser } from "@/context/UserContext"
 import UserConfirmDialog from "./UserConfirmDialog"
 
+// 🧩 Password validation regex (8+ chars, 1 uppercase, 1 number)
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
+
+function validatePassword(password) {
+  if (!password) return { ok: false, message: "Password is required" }
+  if (!PASSWORD_REGEX.test(password)) {
+    return {
+      ok: false,
+      message:
+        "Password must be at least 8 characters long, include at least one uppercase letter and one number.",
+    }
+  }
+  return { ok: true }
+}
+
+// 🧠 Simple temp password generator
+function generateTempPassword() {
+  const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  const lowers = "abcdefghijklmnopqrstuvwxyz"
+  const digits = "0123456789"
+  const all = uppers + lowers + digits
+  let pwd = ""
+  pwd += uppers[Math.floor(Math.random() * uppers.length)]
+  pwd += digits[Math.floor(Math.random() * digits.length)]
+  for (let i = 0; i < 8; i++) {
+    pwd += all[Math.floor(Math.random() * all.length)]
+  }
+  return pwd.split("").sort(() => Math.random() - 0.5).join("") // shuffle
+}
+
 export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
-  const { token, user: currentUser } = useUser() // 👈 get logged-in user
+  const { token, user: currentUser } = useUser()
   const [companies, setCompanies] = useState([])
   const [openConfirm, setOpenConfirm] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -64,9 +95,25 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
   const rolesRequiringCompany = ["company", "student", "team-manager"]
   const requiresCompany = rolesRequiringCompany.includes(form.role)
 
+  // ✨ Generate random password
+  const handleGeneratePassword = () => {
+    const newPass = generateTempPassword()
+    setForm({ ...form, password: newPass })
+  }
+
   // 🧩 Create or edit
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Validate password only for new user
+    if (!user) {
+      const { ok, message } = validatePassword(form.password)
+      if (!ok) {
+        alert(message)
+        return
+      }
+    }
+
     const method = user ? "PUT" : "POST"
     const url = user
       ? `http://localhost:5000/api/users/${user._id}`
@@ -141,29 +188,60 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Name */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
             />
+
+            {/* Email */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+              type="email"
+              required
             />
 
+            {/* Password field (only on create) */}
             {!user && (
-              <input
-                className="border rounded p-2 w-full"
-                placeholder="Password"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
+              <div>
+                <div className="flex gap-2 mb-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeneratePassword}
+                  >
+                    Generate Random Password
+                  </Button>
+                </div>
+                <input
+                  className="border rounded p-2 w-full"
+                  placeholder="Password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                  required
+                />
+                <label className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) => setShowPassword(e.target.checked)}
+                    className="h-4 w-4 accent-red-500"
+                  />
+                  <span>Show password</span>
+                </label>
+              </div>
             )}
 
+            {/* Role */}
             <select
               className="border rounded p-2 w-full"
               value={form.role}
@@ -176,12 +254,14 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               <option value="team-manager">Team Manager</option>
             </select>
 
-            {/* 🏢 Only show when needed */}
+            {/* Company dropdown if required */}
             {requiresCompany && (
               <select
                 className="border rounded p-2 w-full"
                 value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, companyId: e.target.value })
+                }
               >
                 <option value="">Select a company</option>
                 {companies.map((c) => (
@@ -192,8 +272,8 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </select>
             )}
 
+            {/* Footer buttons */}
             <DialogFooter className="flex justify-between gap-2 pt-2">
-              {/* 🔒 Only show archive if editing someone else */}
               {canArchive && (
                 <Button
                   type="button"
@@ -203,7 +283,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
                   {user.isArchived ? "Unarchive" : "Archive"}
                 </Button>
               )}
-
               <Button type="submit" className="w-full">
                 {user ? "Save Changes" : "Create User"}
               </Button>
