@@ -1,54 +1,100 @@
-// src/pages/Courses.jsx
-import { useUser } from "@/context/UserContext"
-import { permissions } from "@/config/permissions"
-import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { useEffect, useState, useMemo } from "react";
+import { apiClient } from "../api/client.js";
+import CourseDialog from "../components/CourseDialog.jsx";
+import CourseEditor from "@/components/CourseEditor.jsx";
 
-export default function Courses() {
-  const { user } = useUser()
-  const canEdit = permissions[user.role]?.can?.editCourse
+export default function CoursesAdminPage() {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
 
-  // Dummy data (replace later with API)
-  const courses = [
-    { id: 1, name: "React Fundamentals", mentor: "Alice", students: 20 },
-    { id: 2, name: "Advanced Node.js", mentor: "Bob", students: 15 },
-    { id: 3, name: "UI/UX Basics", mentor: "Charlie", students: 30 },
-  ]
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const data = await apiClient.get("/api/courses");
+      setCourses(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const table = useMemo(
+    () => (
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left">
+            <th className="py-2">Title</th>
+            <th className="py-2">Modules</th>
+            <th className="py-2">Updated</th>
+            <th className="py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {courses.map((c) => (
+            <tr key={c._id} className="border-b hover:bg-neutral-100">
+              <td className="py-2 font-medium">{c.title}</td>
+              <td className="py-2">{c.modules?.length || 0}</td>
+              <td className="py-2">
+                {new Date(c.updatedAt).toLocaleDateString()}
+              </td>
+              <td className="py-2">
+                <button
+                  onClick={() => {
+                    setSelectedCourse(c._id);
+                    setDialogOpen(true);
+                  }}
+                  className="text-blue-600 underline"
+                >
+                  Open
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ),
+    [courses]
+  );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Courses</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Mentor</TableHead>
-            <TableHead>Students</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {courses.map((course) => (
-            <TableRow key={course.id}>
-              <TableCell>{course.name}</TableCell>
-              <TableCell>{course.mentor}</TableCell>
-              <TableCell>{course.students}</TableCell>
-              <TableCell>
-                <Button size="sm" disabled={!canEdit}>
-                  Edit
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Courses</h1>
+        <button
+          onClick={() => {
+            setSelectedCourse(null);
+            setDialogOpen(true);
+          }}
+          className="px-3 py-2 bg-blue-600 text-white rounded"
+        >
+          + New Course
+        </button>
+      </div>
+
+      {loading ? (
+        <p>Loading courses...</p>
+      ) : error ? (
+        <p className="text-red-500">{error}</p>
+      ) : (
+        table
+      )}
+
+      {dialogOpen && (
+        <CourseEditor
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          courseId={selectedCourse}
+          refresh={fetchCourses}
+        />
+      )}
     </div>
-  )
+  );
 }
