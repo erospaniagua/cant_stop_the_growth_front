@@ -92,9 +92,7 @@ export default function CourseFlowBuilder({ modules = [], onChange, readOnly = f
       target: all[i + 1].id,
       animated: true,
       style: {
-        stroke: isDark
-          ? "rgba(229,231,235,0.4)"
-          : "rgba(255,255,255,0.4)",
+        stroke: isDark ? "rgba(229,231,235,0.4)" : "rgba(255,255,255,0.4)",
         strokeWidth: 0.75,
       },
     }));
@@ -124,15 +122,13 @@ export default function CourseFlowBuilder({ modules = [], onChange, readOnly = f
       target: id,
       animated: true,
       style: {
-        stroke: isDark
-          ? "rgba(229,231,235,0.4)"
-          : "rgba(255,255,255,0.4)",
+        stroke: isDark ? "rgba(229,231,235,0.4)" : "rgba(255,255,255,0.4)",
         strokeWidth: 0.75,
       },
     };
+
     const updatedNodes = [...nodes, newNode];
     const updatedEdges = [...edges, newEdge];
-
     setNodes(updatedNodes);
     setEdges(updatedEdges);
 
@@ -144,11 +140,25 @@ export default function CourseFlowBuilder({ modules = [], onChange, readOnly = f
 
   const handleDeleteLast = () => {
     if (readOnly || nodes.length <= 1) return;
+
     const newNodes = nodes.slice(0, -1);
-    const newEdges = edges.slice(0, -1);
+    const newEdges = edges.filter(
+      (e) => e.target !== nodes[nodes.length - 1].id
+    );
+
     setNodes(newNodes);
     setEdges(newEdges);
-    onChange?.(newNodes.filter((n) => n.id !== "start"));
+
+    // ✅ Preserve all previous node labels properly
+    const modulesData = newNodes
+      .filter((n) => n.id !== "start")
+      .map((n, i) => ({
+        type: n.type,
+        title: n.data?.label || "(untitled)",
+        order: i,
+      }));
+
+    onChange?.(modulesData);
   };
 
   const onNodesChange = useCallback(
@@ -185,7 +195,7 @@ export default function CourseFlowBuilder({ modules = [], onChange, readOnly = f
           transition: "background 0.4s ease",
         }}
       >
-        {/* ✅ Custom Grid Overlay (inside the ReactFlow layer) */}
+        {/* ✅ Blueprint grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -200,10 +210,7 @@ export default function CourseFlowBuilder({ modules = [], onChange, readOnly = f
           }}
         ></div>
 
-        <MiniMap
-          nodeColor={() => "#6366F1"}
-          maskColor="rgba(0,0,0,0.2)"
-        />
+        <MiniMap nodeColor={() => "#6366F1"} maskColor="rgba(0,0,0,0.2)" />
         <Controls showInteractive={false} />
       </ReactFlow>
 

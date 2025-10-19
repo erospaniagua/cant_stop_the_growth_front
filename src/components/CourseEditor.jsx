@@ -3,27 +3,48 @@ import { apiClient } from "../api/client.js";
 import CourseFlowBuilder from "./CourseFlowBuilder";
 
 export default function CourseEditor({ open, onClose, courseId, refresh }) {
-  const [course, setCourse] = useState({ title: "Untitled Course", description: "", modules: [] });
+  const [course, setCourse] = useState({
+    title: "Untitled Course",
+    description: "",
+    modules: [],
+  });
   const [mode, setMode] = useState(courseId ? "view" : "create");
   const [showDetails, setShowDetails] = useState(false);
+  const [saving, setSaving] = useState(false);
   const isEditable = mode === "edit" || mode === "create";
 
-  // Load course when editing
+  // 🔹 Load course when editing
   useEffect(() => {
     if (courseId && open) {
       apiClient.get(`/api/courses/${courseId}`).then(setCourse);
     }
   }, [courseId, open]);
 
+  // 🔹 Save or update course
   const handleSave = async () => {
     if (!course.title.trim()) return alert("Please add a course name");
-    if (mode === "create") {
-      await apiClient.post("/api/courses", course);
-    } else {
-      await apiClient.patch(`/api/courses/${courseId}`, course);
+
+    try {
+      setSaving(true);
+
+      if (mode === "create") {
+        await apiClient.post("/api/courses", course);
+      } else {
+        await apiClient.patch(`/api/courses/${courseId}`, {
+          title: course.title,
+          description: course.description,
+          modules: course.modules,
+        });
+      }
+
+      refresh?.();
+      setSaving(false);
+      onClose();
+    } catch (err) {
+      console.error("Error saving course:", err);
+      setSaving(false);
+      alert("Failed to save course. Please try again.");
     }
-    refresh?.();
-    onClose();
   };
 
   if (!open) return null;
@@ -33,7 +54,7 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
       {/* 🔹 Breadcrumb Bar */}
       <div className="flex items-center justify-between px-6 py-3 bg-neutral-900 border-b border-neutral-800 text-sm">
         {/* Left side: Breadcrumb for name + details */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative">
           <button
             onClick={() => setShowDetails(!showDetails)}
             className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium"
@@ -58,7 +79,7 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
           </button>
 
           {showDetails && (
-            <div className="absolute top-14 left-6 bg-neutral-900 border border-neutral-800 rounded-lg p-4 shadow-xl w-[300px] z-50">
+            <div className="absolute top-10 left-0 bg-neutral-900 border border-neutral-800 rounded-lg p-4 shadow-xl w-[300px] z-50">
               <input
                 disabled={!isEditable}
                 value={course.title}
@@ -93,9 +114,14 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
           {isEditable && (
             <button
               onClick={handleSave}
-              className="text-green-400 hover:text-green-300 font-medium"
+              disabled={saving}
+              className={`font-medium ${
+                saving
+                  ? "text-neutral-500 cursor-not-allowed"
+                  : "text-green-400 hover:text-green-300"
+              }`}
             >
-              Save
+              {saving ? "Saving..." : "Save"}
             </button>
           )}
           <button
