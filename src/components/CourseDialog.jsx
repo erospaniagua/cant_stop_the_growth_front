@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/client.js";
 import { ReactFlowProvider } from "reactflow";
-import CourseFlowBuilder from "./CourseFlowBuilder";
+import CourseFlowBuilder from "./courses/CourseFlowBuilder.jsx";
 
 
 export default function CourseDialog({ open, onClose, courseId, refresh }) {

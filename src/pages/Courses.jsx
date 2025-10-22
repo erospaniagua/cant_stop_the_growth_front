@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { apiClient } from "../api/client.js";
 import CourseDialog from "../components/CourseDialog.jsx";
-import CourseEditor from "@/components/CourseEditor.jsx";
+import CourseEditor from "@/components/courses/CourseEditor.jsx";
 
 
 export default function CoursesAdminPage() {
