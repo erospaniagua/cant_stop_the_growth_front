@@ -1,18 +1,32 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 /**
  * CoursePreviewDialog
  * ---------------------
  * Shows the entire course content (modules in sequence)
- * before confirming the bulk upload/publish step.
+ * before confirming the final upload/publish step.
  */
-export default function CoursePreviewDialog({ modules, onClose, onConfirm, uploading }) {
+export default function CoursePreviewDialog({
+  modules = [],
+  onClose,
+  onConfirm,
+  uploading,
+}) {
+  // 🧮 Basic stats (for quick sanity check before publish)
+  const summary = useMemo(() => {
+    const counts = { video: 0, pdf: 0, quiz: 0, cert: 0 };
+    for (const m of modules) counts[m.type] = (counts[m.type] || 0) + 1;
+    return counts;
+  }, [modules]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6">
-      <div className="bg-neutral-900 rounded-2xl shadow-2xl w-[90%] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="bg-neutral-900 rounded-2xl shadow-2xl w-[90%] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-neutral-800">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-800">
-          <h2 className="text-lg font-semibold text-white">Course Preview</h2>
+        <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-800 bg-neutral-900/90 backdrop-blur">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            Course Review
+          </h2>
           <button
             onClick={onClose}
             className="text-neutral-400 hover:text-white text-sm font-medium"
@@ -21,15 +35,33 @@ export default function CoursePreviewDialog({ modules, onClose, onConfirm, uploa
           </button>
         </div>
 
+        {/* Quick summary */}
+        <div className="px-6 py-3 border-b border-neutral-800 text-sm text-neutral-300 bg-neutral-900/60">
+          <span className="mr-4">
+            🎥 Videos: <span className="text-white">{summary.video}</span>
+          </span>
+          <span className="mr-4">
+            📄 PDFs: <span className="text-white">{summary.pdf}</span>
+          </span>
+          <span className="mr-4">
+            🧠 Quizzes: <span className="text-white">{summary.quiz}</span>
+          </span>
+          <span>
+            🎓 Certifications: <span className="text-white">{summary.cert}</span>
+          </span>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {modules.length === 0 ? (
-            <p className="text-neutral-400 text-center">No modules yet.</p>
+            <p className="text-neutral-400 text-center">
+              No modules added yet.
+            </p>
           ) : (
             modules.map((mod, i) => (
               <div
                 key={i}
-                className="rounded-xl bg-neutral-800 border border-neutral-700 p-4"
+                className="rounded-xl bg-neutral-800/80 border border-neutral-700 p-4 shadow-sm"
               >
                 <h3 className="font-medium text-white mb-3">
                   {i + 1}. {mod.title || "Untitled Module"}{" "}
@@ -38,18 +70,12 @@ export default function CoursePreviewDialog({ modules, onClose, onConfirm, uploa
                   </span>
                 </h3>
 
-                {/* Preview by module type */}
+                {/* Type-based previews */}
                 {mod.type === "video" && (
                   <div className="w-full">
-                    {mod.payload?.preview ? (
+                    {mod.payload?.preview || mod.payload?.uploadedUrl ? (
                       <video
-                        src={mod.payload.preview}
-                        controls
-                        className="w-full rounded-lg border border-neutral-700"
-                      />
-                    ) : mod.payload?.uploadedUrl ? (
-                      <video
-                        src={mod.payload.uploadedUrl}
+                        src={mod.payload.preview || mod.payload.uploadedUrl}
                         controls
                         className="w-full rounded-lg border border-neutral-700"
                       />
@@ -63,15 +89,9 @@ export default function CoursePreviewDialog({ modules, onClose, onConfirm, uploa
 
                 {mod.type === "pdf" && (
                   <div className="w-full">
-                    {mod.payload?.preview ? (
+                    {mod.payload?.preview || mod.payload?.uploadedUrl ? (
                       <iframe
-                        src={mod.payload.preview}
-                        title={mod.title}
-                        className="w-full h-[400px] rounded-lg border border-neutral-700"
-                      />
-                    ) : mod.payload?.uploadedUrl ? (
-                      <iframe
-                        src={mod.payload.uploadedUrl}
+                        src={mod.payload.preview || mod.payload.uploadedUrl}
                         title={mod.title}
                         className="w-full h-[400px] rounded-lg border border-neutral-700"
                       />
@@ -144,13 +164,13 @@ export default function CoursePreviewDialog({ modules, onClose, onConfirm, uploa
           <button
             onClick={onConfirm}
             disabled={uploading}
-            className={`px-4 py-2 rounded text-white font-medium ${
+            className={`px-4 py-2 rounded text-white font-semibold ${
               uploading
                 ? "bg-yellow-600 cursor-wait"
                 : "bg-purple-600 hover:bg-purple-500"
             }`}
           >
-            {uploading ? "Publishing..." : "Confirm & Publish"}
+            {uploading ? "Publishing..." : "Publish Course"}
           </button>
         </div>
       </div>

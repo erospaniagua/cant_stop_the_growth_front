@@ -3,13 +3,8 @@ import { apiClient } from "@/api/client.js";
 import CourseFlowBuilder from "./CourseFlowBuilder";
 import { useCourseStaging } from "@/hooks/useCourseStaging.js";
 import CoursePreviewDialog from "./CoursePreviewDialog";
-
-/* Simulated AWS upload */
-async function uploadToAWS(file) {
-  console.log("Uploading to AWS:", file.name);
-  await new Promise((r) => setTimeout(r, 800));
-  return `https://s3.fake-bucket.com/${encodeURIComponent(file.name)}`;
-}
+import { uploadToAWS } from "@/utils/uploadToAWS.js";
+import { useAutoSaveCourse } from "@/hooks/useAutoSaveCourse.js";
 
 export default function CourseEditor({ open, onClose, courseId, refresh }) {
   const [course, setCourse] = useState({
@@ -28,6 +23,9 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
   const { staging, setStaging, updateModule, clearStaging } =
     useCourseStaging(courseId);
 
+  // 🧩 Automatically save draft progress to Mongo
+  useAutoSaveCourse(courseId || course._id, staging);
+
   /* -------------------- Load existing course -------------------- */
   useEffect(() => {
     if (courseId && open) {
@@ -42,44 +40,41 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
     }
   }, [courseId, open, setStaging]);
 
-  /* -------------------- Local Save (Draft) -------------------- */
-  const handleSave = async () => {
-    if (!course.title.trim()) return alert("Please add a course name");
-
-    const payload = {
-      ...course,
-      modules: staging.modules.map((m, i) => ({
-        ...m,
-        order: i,
-        payload: { ...m.payload, file: undefined, preview: undefined },
-      })),
-      finished: false,
-    };
-
-    if (mode === "create") {
-      await apiClient.post("/api/courses", payload);
-    } else {
-      await apiClient.patch(`/api/courses/${courseId}`, payload);
-    }
-
-    refresh?.();
-    onClose();
-  };
-
-  /* -------------------- Final Upload (from Preview) -------------------- */
+  /* ================================================================
+     📦 Publish confirmed — Create draft (if needed), upload, finalize
+  ================================================================ */
   const handlePublishConfirmed = async () => {
     try {
       setUploading(true);
 
+      // 🧩 Step 0 — Ensure course exists before uploading files
+      let currentCourseId = courseId || course._id;
+      if (!currentCourseId) {
+        const created = await apiClient.post("/api/courses", {
+          title: course.title,
+          description: course.description,
+          modules: staging.modules,
+          finished: false,
+        });
+        setCourse(created);
+        currentCourseId = created._id;
+        console.log("🆕 Created new course draft:", created._id);
+      }
+
+      // 🗂️ Step 1 — Upload files to S3 (staging/{courseId}/)
       const updatedModules = await Promise.all(
         staging.modules.map(async (m) => {
           if (m.payload?.file && !m.payload?.uploadedUrl) {
-            const url = await uploadToAWS(m.payload.file);
+            const uploadedUrl = await uploadToAWS(
+              m.payload.file,
+              currentCourseId,
+              m.type
+            );
             return {
               ...m,
               payload: {
                 ...m.payload,
-                uploadedUrl: url,
+                uploadedUrl,
                 file: undefined,
                 preview: undefined,
               },
@@ -89,17 +84,15 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
         })
       );
 
-      const finishedCourse = {
+      // 💾 Step 2 — Save course with uploaded file URLs (still in staging/)
+      await apiClient.patch(`/api/courses/${currentCourseId}`, {
         ...course,
         modules: updatedModules,
-        finished: true,
-      };
+        finished: false,
+      });
 
-      if (mode === "create") {
-        await apiClient.post("/api/courses", finishedCourse);
-      } else {
-        await apiClient.patch(`/api/courses/${courseId}`, finishedCourse);
-      }
+      // 🚀 Step 3 — Trigger backend publish (moves staging → /courses/{id}/)
+      await apiClient.patch(`/api/courses/${currentCourseId}/publish`);
 
       clearStaging();
       alert("✅ Course published successfully!");
@@ -107,13 +100,16 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
       onClose();
       refresh?.();
     } catch (err) {
-      console.error(err);
-      alert("❌ Upload failed. Please try again.");
+      console.error("Publish error:", err);
+      alert("❌ Upload or publish failed. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
+  /* ================================================================
+     🧩 Render
+  ================================================================ */
   if (!open) return null;
 
   return (
@@ -183,20 +179,12 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
             </button>
           )}
           {isEditable && (
-            <>
-              <button
-                onClick={handleSave}
-                className="text-green-400 hover:text-green-300 font-medium"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => setShowPreview(true)}
-                className="text-purple-400 hover:text-purple-300 font-medium"
-              >
-                Preview
-              </button>
-            </>
+            <button
+              onClick={() => setShowPreview(true)}
+              className="text-purple-400 hover:text-purple-300 font-medium"
+            >
+              Review
+            </button>
           )}
           <button
             onClick={onClose}
@@ -210,6 +198,7 @@ export default function CourseEditor({ open, onClose, courseId, refresh }) {
       {/* 🧩 Canvas */}
       <div className="flex-1 relative">
         <CourseFlowBuilder
+          courseId={courseId || course._id}
           modules={staging.modules.length ? staging.modules : course.modules}
           onChange={(mods) => {
             setCourse((c) => ({ ...c, modules: mods }));

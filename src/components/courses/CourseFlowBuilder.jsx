@@ -58,6 +58,7 @@ const moduleEditors = {
 
 /* ======================================================== */
 export default function CourseFlowBuilder({
+  courseId, // ✅ now receives the courseId prop from CourseEditor
   modules = [],
   onChange,
   onUpdateModule,
@@ -122,70 +123,68 @@ export default function CourseFlowBuilder({
 
   /* -------------------- Add / Remove modules -------------------- */
   const addModule = (type, title) => {
-  if (readOnly) return;
+    if (readOnly) return;
 
-  const id = crypto.randomUUID();
-  const last = nodes[nodes.length - 1];
-  const newNode = {
-    id,
-    type,
-    data: { label: title },
-    position: { x: last.position.x + 200, y: 150 },
-    draggable: true,
+    const id = crypto.randomUUID();
+    const last = nodes[nodes.length - 1];
+    const newNode = {
+      id,
+      type,
+      data: { label: title },
+      position: { x: last.position.x + 200, y: 150 },
+      draggable: true,
+    };
+    const newEdge = {
+      id: `${last.id}-${id}`,
+      source: last.id,
+      target: id,
+      animated: true,
+      style: {
+        stroke: isDark ? "rgba(229,231,235,0.4)" : "rgba(255,255,255,0.4)",
+        strokeWidth: 0.75,
+      },
+    };
+
+    const updatedNodes = [...nodes, newNode];
+    const updatedEdges = [...edges, newEdge];
+    setNodes(updatedNodes);
+    setEdges(updatedEdges);
+
+    // 🧠 Preserve old module data and only append the new one
+    const modulesData = [
+      ...modules.map((m, i) => ({
+        ...m,
+        order: i,
+      })),
+      {
+        type,
+        title,
+        order: modules.length,
+        payload: {},
+      },
+    ];
+
+    onChange?.(modulesData);
   };
-  const newEdge = {
-    id: `${last.id}-${id}`,
-    source: last.id,
-    target: id,
-    animated: true,
-    style: {
-      stroke: isDark ? "rgba(229,231,235,0.4)" : "rgba(255,255,255,0.4)",
-      strokeWidth: 0.75,
-    },
-  };
 
-  const updatedNodes = [...nodes, newNode];
-  const updatedEdges = [...edges, newEdge];
-  setNodes(updatedNodes);
-  setEdges(updatedEdges);
+  const handleDeleteLast = () => {
+    if (readOnly || nodes.length <= 1) return;
 
-  // 🧠 Preserve old module data and only append the new one
-  const modulesData = [
-    ...modules.map((m, i) => ({
+    const newNodes = nodes.slice(0, -1);
+    const newEdges = edges.filter(
+      (e) => e.target !== nodes[nodes.length - 1].id
+    );
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+
+    const newModules = modules.slice(0, -1).map((m, i) => ({
       ...m,
       order: i,
-    })),
-    {
-      type,
-      title,
-      order: modules.length,
-      payload: {}, // new module gets empty payload
-    },
-  ];
+    }));
 
-  onChange?.(modulesData);
-};
-
-const handleDeleteLast = () => {
-  if (readOnly || nodes.length <= 1) return;
-
-  const newNodes = nodes.slice(0, -1);
-  const newEdges = edges.filter(
-    (e) => e.target !== nodes[nodes.length - 1].id
-  );
-
-  setNodes(newNodes);
-  setEdges(newEdges);
-
-  // 🧠 Preserve payloads except the removed one
-  const newModules = modules.slice(0, -1).map((m, i) => ({
-    ...m,
-    order: i,
-  }));
-
-  onChange?.(newModules);
-};
-
+    onChange?.(newModules);
+  };
 
   /* -------------------- Open Editor Modal -------------------- */
   const handleNodeClick = (_, node) => {
@@ -273,33 +272,34 @@ const handleDeleteLast = () => {
               ✕
             </button>
 
+            {/* ✅ Pass courseId down to editor */}
             <EditorComponent
-              module={activeNode.module}
+              module={{ ...activeNode.module, courseId }}
               onChange={(data) => {
-              const updated = [...modules];
-              const idx = activeNode.idx;
-              const mod = activeNode.module;
+                const updated = [...modules];
+                const idx = activeNode.idx;
+                const mod = activeNode.module;
 
-              // Merge payload
-              const mergedPayload = { ...mod.payload, ...data.payload };
-              updated[idx] = { ...mod, title: data.title || mod.title, payload: mergedPayload };
+                const mergedPayload = { ...mod.payload, ...data.payload };
+                updated[idx] = {
+                  ...mod,
+                  title: data.title || mod.title,
+                  payload: mergedPayload,
+                };
 
-              // Update builder + staging
-              onChange?.(updated);
+                onChange?.(updated);
 
-              if (onUpdateModule) {
-              const idKey = mod._id || mod.tempId || idx;
-              onUpdateModule(idKey, {
-              title: data.title || mod.title,
-              payload: mergedPayload,
-               });
-              }
+                if (onUpdateModule) {
+                  const idKey = mod._id || mod.tempId || idx;
+                  onUpdateModule(idKey, {
+                    title: data.title || mod.title,
+                    payload: mergedPayload,
+                  });
+                }
 
-              // Reflect the new data inside the modal itself
-              setActiveNode({ idx, module: updated[idx] });
+                setActiveNode({ idx, module: updated[idx] });
               }}
-             />
-
+            />
           </div>
         </div>
       )}
