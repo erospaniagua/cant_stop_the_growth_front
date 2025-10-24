@@ -8,21 +8,26 @@ import { uploadToAWS } from "@/utils/uploadToAWS.js";
 export default function VideoEditor({ module, onChange }) {
   const [title, setTitle] = useState(module.title || "");
   const [file, setFile] = useState(module.payload?.file || null);
-  const [preview, setPreview] = useState(module.payload?.preview || null);
+  const [preview, setPreview] = useState(
+    module.payload?.preview || module.payload?.uploadedUrl || null
+  );
   const [uploading, setUploading] = useState(false);
 
-  // 🧩 Load existing preview (if persisted)
+  /* ===========================================================
+     Sync local title/preview when module changes externally
+  =========================================================== */
   useEffect(() => {
-    if (module.payload?.preview) {
-      setPreview(module.payload.preview);
-    } else if (module.payload?.uploadedUrl) {
+    setTitle(module.title || "");
+    if (module.payload?.uploadedUrl) {
       setPreview(module.payload.uploadedUrl);
+    } else if (module.payload?.preview) {
+      setPreview(module.payload.preview);
     }
   }, [module]);
 
-  /** -------------------------------------------------------------
-   *  Handle file select → Upload immediately to S3 staging
-   * ------------------------------------------------------------- */
+  /* ===========================================================
+     Handle file selection → immediate upload to S3 staging
+  =========================================================== */
   const handleFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -31,28 +36,32 @@ export default function VideoEditor({ module, onChange }) {
     setFile(f);
     setPreview(blob);
 
-    // Show local preview immediately
+    // ✅ Immediately notify parent (for optimistic UI)
     onChange?.({
+      ...module,
       title,
-      payload: { file: f, preview: blob },
+      payload: {
+        ...module.payload,
+        file: f,
+        preview: blob,
+      },
     });
 
     try {
       setUploading(true);
 
-      // Get the courseId from module (passed down by parent)
-      // Fallback to a temporary ID if not yet saved
       const courseId = module.courseId || module._id || "temp";
-
-      // 🔼 Upload directly to S3 staging/<courseId>/
       const uploadedUrl = await uploadToAWS(f, courseId, module.type || "video");
 
-      // Update parent with final S3 URL
+      // ✅ Update parent again with final S3 URL so autosave has correct value
       onChange?.({
+        ...module,
         title,
         payload: {
-          uploadedUrl,
-          preview: uploadedUrl, // now use remote file for preview
+          ...module.payload,
+          uploadedUrl,          // ✅ used later by publishPhase
+          fileUrl: uploadedUrl,  // ✅ optional alias for backend safety
+          preview: uploadedUrl,
         },
       });
 
@@ -69,13 +78,13 @@ export default function VideoEditor({ module, onChange }) {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">🎥 Video Lesson</h2>
 
-      {/* Title */}
+      {/* Title field */}
       <input
         type="text"
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
-          onChange?.({ title: e.target.value });
+          onChange?.({ ...module, title: e.target.value });
         }}
         placeholder="Video title"
         className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded text-white text-sm"
@@ -94,9 +103,7 @@ export default function VideoEditor({ module, onChange }) {
         <label
           htmlFor={`video-upload-${module._id || "temp"}`}
           className={`cursor-pointer ${
-            uploading
-              ? "text-neutral-500"
-              : "text-blue-400 hover:text-blue-300"
+            uploading ? "text-neutral-500" : "text-blue-400 hover:text-blue-300"
           }`}
         >
           {uploading

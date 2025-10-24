@@ -43,8 +43,8 @@ function App() {
           element={<ProtectedRoute path="/coaches" element={<Coaches />} />}
         />
         <Route
-          path="/courses"
-          element={<ProtectedRoute path="/courses" element={<Courses />} />}
+          path="/learning-routes"
+          element={<ProtectedRoute path="/learning-routes" element={<Courses />} />}
         />
         <Route
           path="/students"

@@ -1,64 +1,26 @@
-import { useState, useEffect, useRef } from "react";
-import { apiClient } from "@/api/client.js";
+import { useState, useEffect } from "react";
 
 /**
- * QuizEditor — handles quiz creation and auto-saves progress to MongoDB.
- * - Syncs changes to parent state via onChange
- * - Auto-saves every 2s after user input stops
- * - Shows save status in UI
+ * QuizEditor — handles quiz creation within a phase module.
+ * - No backend autosave
+ * - Syncs changes upward via onChange
+ * - Parent (PhaseEditor) handles saving when user closes the node
  */
 export default function QuizEditor({ module, onChange }) {
   const [title, setTitle] = useState(module.title || "");
   const [questions, setQuestions] = useState(module.payload?.questions || []);
-  const [saveStatus, setSaveStatus] = useState("idle"); // "idle" | "saving" | "saved" | "error"
-  const timer = useRef(null);
+  const [status, setStatus] = useState("idle"); // "idle" | "editing" | "saved"
 
   /* =========================================================
-     🔄 Keep parent staging in sync immediately
+     🔄 Keep parent (phase) state in sync immediately
   ========================================================= */
   useEffect(() => {
-    onChange?.({ title, payload: { questions } });
-  }, [title, questions]);
-
-  /* =========================================================
-     💾 Auto-save to Mongo after debounce (2s)
-  ========================================================= */
-  useEffect(() => {
-    if (!module.courseId && !module._id) return; // skip if no course context
-
-    // Clear previous timer
-    if (timer.current) clearTimeout(timer.current);
-
-    timer.current = setTimeout(async () => {
-      try {
-        setSaveStatus("saving");
-
-        const courseId = module.courseId || module._id;
-        await apiClient.patch(`/api/courses/${courseId}`, {
-          title: module.title || title,
-          modules: [
-            {
-              ...module,
-              title,
-              payload: { questions },
-            },
-          ],
-          finished: false,
-        });
-
-        setSaveStatus("saved");
-        console.log("💾 Quiz auto-saved to Mongo:", courseId);
-
-        // reset status after a short delay
-        setTimeout(() => setSaveStatus("idle"), 2000);
-      } catch (err) {
-        console.error("❌ Quiz auto-save failed:", err);
-        setSaveStatus("error");
-      }
-    }, 2000);
-
-    // Cleanup timer on unmount
-    return () => clearTimeout(timer.current);
+    onChange?.({
+      ...module,                     // ✅ preserve other fields (type, _id, etc.)
+      title,
+      payload: { questions },        // ✅ consistent payload shape
+    });
+    setStatus("editing");
   }, [title, questions]);
 
   /* =========================================================
@@ -76,9 +38,7 @@ export default function QuizEditor({ module, onChange }) {
   };
 
   const updateQuestion = (id, updated) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? updated : q))
-    );
+    setQuestions((prev) => prev.map((q) => (q.id === id ? updated : q)));
   };
 
   const removeQuestion = (id) => {
@@ -102,14 +62,11 @@ export default function QuizEditor({ module, onChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">🧩 Quiz</h2>
-        {saveStatus === "saving" && (
-          <span className="text-xs text-blue-400 animate-pulse">Saving...</span>
+        {status === "editing" && (
+          <span className="text-xs text-yellow-400">Unsaved changes</span>
         )}
-        {saveStatus === "saved" && (
-          <span className="text-xs text-green-400">All changes saved ✓</span>
-        )}
-        {saveStatus === "error" && (
-          <span className="text-xs text-red-400">Save failed ⚠</span>
+        {status === "saved" && (
+          <span className="text-xs text-green-400">Saved ✓</span>
         )}
       </div>
 

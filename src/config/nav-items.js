@@ -6,7 +6,7 @@ export const navItems = {
     { title: "dashboard", href: "/", icon: Home },
     { title: "companies", href: "/companies", icon: Building2 },
     { title: "coaches", href: "/coaches", icon: Users },
-    { title: "courses", href: "/courses", icon: BookOpen },
+    { title: "Learning Routes", href: "/learning-routes", icon: BookOpen },
     { title: "students", href: "/students", icon: GraduationCap },
     { title: "analytics", href: "/analytics", icon: BarChart },
     { title: "Users", href: "/admin/users", icon: Users },

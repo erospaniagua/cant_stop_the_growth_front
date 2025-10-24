@@ -2,27 +2,32 @@ import { useState, useEffect } from "react";
 import { uploadToAWS } from "@/utils/uploadToAWS.js";
 
 /**
- * PDFEditor — immediately uploads the selected PDF
+ * PdfEditor — immediately uploads the selected PDF
  * to staging/<courseId>/ and provides instant preview.
  */
-export default function PDFEditor({ module, onChange }) {
+export default function PdfEditor({ module, onChange }) {
   const [title, setTitle] = useState(module.title || "");
   const [file, setFile] = useState(module.payload?.file || null);
-  const [preview, setPreview] = useState(module.payload?.preview || null);
+  const [preview, setPreview] = useState(
+    module.payload?.preview || module.payload?.uploadedUrl || null
+  );
   const [uploading, setUploading] = useState(false);
 
-  // 🧩 Load persisted preview if it exists
+  /* ===========================================================
+     Sync title/preview when module changes externally
+  =========================================================== */
   useEffect(() => {
-    if (module.payload?.preview) {
-      setPreview(module.payload.preview);
-    } else if (module.payload?.uploadedUrl) {
+    setTitle(module.title || "");
+    if (module.payload?.uploadedUrl) {
       setPreview(module.payload.uploadedUrl);
+    } else if (module.payload?.preview) {
+      setPreview(module.payload.preview);
     }
   }, [module]);
 
-  /** -------------------------------------------------------------
-   *  Handle file select → Upload immediately to S3 staging
-   * ------------------------------------------------------------- */
+  /* ===========================================================
+     Handle file select → upload to S3 staging
+  =========================================================== */
   const handleFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -31,10 +36,15 @@ export default function PDFEditor({ module, onChange }) {
     setFile(f);
     setPreview(blob);
 
-    // Local preview while uploading
+    // ✅ Optimistic update for UI
     onChange?.({
+      ...module,
       title,
-      payload: { file: f, preview: blob },
+      payload: {
+        ...module.payload,
+        file: f,
+        preview: blob,
+      },
     });
 
     try {
@@ -45,12 +55,15 @@ export default function PDFEditor({ module, onChange }) {
       // 🔼 Upload directly to S3 staging/<courseId>/
       const uploadedUrl = await uploadToAWS(f, courseId, module.type || "pdf");
 
-      // Update parent state with final S3 URL
+      // ✅ Update parent with final S3 URL for autosave
       onChange?.({
+        ...module,
         title,
         payload: {
-          uploadedUrl,
-          preview: uploadedUrl, // switch to remote preview
+          ...module.payload,
+          uploadedUrl,          // ✅ needed for backend move
+          fileUrl: uploadedUrl,  // ✅ alias for publishPhase safety
+          preview: uploadedUrl,
         },
       });
 
@@ -73,7 +86,7 @@ export default function PDFEditor({ module, onChange }) {
         value={title}
         onChange={(e) => {
           setTitle(e.target.value);
-          onChange?.({ title: e.target.value });
+          onChange?.({ ...module, title: e.target.value });
         }}
         placeholder="PDF title"
         className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded text-white text-sm"
@@ -88,18 +101,17 @@ export default function PDFEditor({ module, onChange }) {
           className="hidden"
           id={`pdf-upload-${module._id || "temp"}`}
         />
+
         <label
           htmlFor={`pdf-upload-${module._id || "temp"}`}
           className={`cursor-pointer ${
-            uploading
-              ? "text-neutral-500"
-              : "text-green-400 hover:text-green-300"
+            uploading ? "text-neutral-500" : "text-green-400 hover:text-green-300"
           }`}
         >
           {uploading ? "Uploading..." : file ? "Replace PDF" : "Upload PDF"}
         </label>
 
-        {/* Preview */}
+        {/* PDF Preview */}
         {preview && (
           <iframe
             src={preview}
