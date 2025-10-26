@@ -45,8 +45,14 @@ const nodeTypes = {
   video: (props) => <NodeBox {...props} bg="#2563EB" />,
   pdf: (props) => <NodeBox {...props} bg="#059669" />,
   quiz: (props) => <NodeBox {...props} bg="#D97706" />,
-  cert: (props) => <NodeBox {...props} bg="#7C3AED" />,
-};
+  cert: (props) => (
+  <NodeBox
+    {...props}
+    bg="#7C3AED"
+    data={{ ...props.data, label: "🏁 Certification" }}
+   />
+   ),
+   };
 
 /* -------------------- MODULE EDITORS -------------------- */
 const moduleEditors = {
@@ -58,7 +64,7 @@ const moduleEditors = {
 
 /* ======================================================== */
 export default function CourseFlowBuilder({
-  courseId, // ✅ now receives the courseId prop from CourseEditor
+  courseId,
   modules = [],
   onChange,
   onUpdateModule,
@@ -84,7 +90,9 @@ export default function CourseFlowBuilder({
     nodesRef.current = nodes;
   }, [nodes]);
 
-  /* -------------------- Build from modules -------------------- */
+  /* ===========================================================
+     🧩 Build from modules (reuse saved positions if any)
+  =========================================================== */
   const buildFromModules = useCallback(() => {
     const base = [
       {
@@ -95,14 +103,24 @@ export default function CourseFlowBuilder({
         draggable: !readOnly,
       },
     ];
-    const newNodes = modules.map((m, i) => ({
-      id: `${i + 1}`,
-      type: m.type,
-      data: { label: m.title },
-      position: { x: (i + 1) * 200, y: 150 },
-      draggable: !readOnly,
-    }));
+
+    const oldPositions = new Map(nodesRef.current.map((n) => [n.id, n.position]));
+
+    const newNodes = modules.map((m, i) => {
+      const id = m._id?.toString() || `${i + 1}`;
+      const savedPos = m.payload?.position; // ✅ use saved layout if available
+      const existingPos = oldPositions.get(id);
+      return {
+        id,
+        type: m.type,
+        data: { label: m.title },
+        position: savedPos || existingPos || { x: (i + 1) * 220, y: 150 },
+        draggable: !readOnly,
+      };
+    });
+
     const all = [...base, ...newNodes];
+
     const newEdges = all.slice(0, -1).map((n, i) => ({
       id: `e${n.id}-${all[i + 1].id}`,
       source: n.id,
@@ -113,6 +131,7 @@ export default function CourseFlowBuilder({
         strokeWidth: 0.75,
       },
     }));
+
     setNodes(all);
     setEdges(newEdges);
   }, [modules, isDark, readOnly]);
@@ -121,7 +140,39 @@ export default function CourseFlowBuilder({
     if (modules.length) buildFromModules();
   }, [modules, buildFromModules]);
 
-  /* -------------------- Add / Remove modules -------------------- */
+  /* ===========================================================
+     🪄 Persist position changes when user drags nodes
+  =========================================================== */
+  const onNodesChange = useCallback(
+    (changes) => {
+      setNodes((nds) => {
+        const updated = applyNodeChanges(changes, nds);
+
+        // 🧠 Persist positions back to modules
+        if (onChange && changes.some((c) => c.type === "position")) {
+          const updatedModules = modules.map((m, i) => {
+            const id = m._id?.toString() || `${i + 1}`;
+            const node = updated.find((n) => n.id === id);
+            return {
+              ...m,
+              payload: {
+                ...m.payload,
+                position: node?.position || m.payload?.position,
+              },
+            };
+          });
+          onChange(updatedModules);
+        }
+
+        return updated;
+      });
+    },
+    [modules, onChange]
+  );
+
+  /* ===========================================================
+     Add / Remove modules (same as before)
+  =========================================================== */
   const addModule = (type, title) => {
     if (readOnly) return;
 
@@ -131,7 +182,7 @@ export default function CourseFlowBuilder({
       id,
       type,
       data: { label: title },
-      position: { x: last.position.x + 200, y: 150 },
+      position: { x: last.position.x + 220, y: 150 },
       draggable: true,
     };
     const newEdge = {
@@ -150,7 +201,6 @@ export default function CourseFlowBuilder({
     setNodes(updatedNodes);
     setEdges(updatedEdges);
 
-    // 🧠 Preserve old module data and only append the new one
     const modulesData = [
       ...modules.map((m, i) => ({
         ...m,
@@ -160,7 +210,7 @@ export default function CourseFlowBuilder({
         type,
         title,
         order: modules.length,
-        payload: {},
+        payload: { position: newNode.position }, // ✅ store new node position
       },
     ];
 
@@ -186,28 +236,31 @@ export default function CourseFlowBuilder({
     onChange?.(newModules);
   };
 
-  /* -------------------- Open Editor Modal -------------------- */
+  /* ===========================================================
+     Node click → open editor modal
+  =========================================================== */
   const handleNodeClick = (_, node) => {
     if (readOnly || node.id === "start") return;
-    const idx = parseInt(node.id) - 1;
+    const idx = modules.findIndex(
+      (m, i) => m._id?.toString() === node.id || `${i + 1}` === node.id
+    );
+    if (idx === -1) return;
     const module = modules[idx];
     setActiveNode({ idx, module });
   };
-
-  /* -------------------- Drag / Move -------------------- */
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
 
   /* -------------------- Blueprint Style -------------------- */
   const bgColor = isDark ? "#1E1E1E" : "#1E3A8A";
   const gridGap = 80;
 
-  /* -------------------- Render -------------------- */
+  /* ===========================================================
+     Render
+  =========================================================== */
   const EditorComponent =
-    activeNode?.module?.type &&
-    moduleEditors[activeNode.module.type];
+  activeNode?.module?.type &&
+  activeNode.module.type !== "cert" && // 🧩 skip cert modules
+  moduleEditors[activeNode.module.type];
+
 
   return (
     <div className="relative w-full h-full overflow-hidden" tabIndex={0}>
@@ -227,7 +280,6 @@ export default function CourseFlowBuilder({
         defaultViewport={{ x: -100, y: 0, zoom: 0.8 }}
         style={{ background: bgColor }}
       >
-        {/* Blueprint Grid */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -263,16 +315,23 @@ export default function CourseFlowBuilder({
 
       {/* 🧩 Active Module Editor */}
       {EditorComponent && activeNode && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="relative bg-neutral-900 text-white w-[700px] max-h-[90vh] rounded-xl p-6 overflow-y-auto">
-            <button
-              onClick={() => setActiveNode(null)}
-              className="absolute top-3 right-3 text-neutral-400 hover:text-white"
-            >
-              ✕
-            </button>
+       <div
+        className="absolute inset-0 bg-black/60 flex justify-center z-50"
+        style={{
+        alignItems: "flex-start",   // 🧩 start from top instead of center
+        paddingTop: "5vh",          // ✅ adds space from top (visible close button)
+        overflowY: "auto",
+        }}
+       >
+       <div className="relative bg-neutral-900 text-white w-[700px] max-h-[90vh] rounded-xl p-6 overflow-y-auto shadow-lg">
+       <button
+        onClick={() => setActiveNode(null)}
+        className="absolute top-3 right-3 text-neutral-400 hover:text-white"
+       >
+        ✕
+       </button>
 
-            {/* ✅ Pass courseId down to editor */}
+
             <EditorComponent
               module={{ ...activeNode.module, courseId }}
               onChange={(data) => {
