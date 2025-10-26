@@ -8,9 +8,16 @@ import { uploadToAWS } from "@/utils/uploadToAWS.js";
 export default function VideoEditor({ module, onChange }) {
   const [title, setTitle] = useState(module.title || "");
   const [file, setFile] = useState(module.payload?.file || null);
+
+  // ✅ Prefer signedUrl when available (for reopened published phases)
   const [preview, setPreview] = useState(
-    module.payload?.preview || module.payload?.uploadedUrl || null
+    module.payload?.signedUrl ||
+      module.payload?.uploadedUrl ||
+      module.payload?.fileUrl ||
+      module.payload?.preview ||
+      null
   );
+
   const [uploading, setUploading] = useState(false);
 
   /* ===========================================================
@@ -18,8 +25,13 @@ export default function VideoEditor({ module, onChange }) {
   =========================================================== */
   useEffect(() => {
     setTitle(module.title || "");
-    if (module.payload?.uploadedUrl) {
+
+    if (module.payload?.signedUrl) {
+      setPreview(module.payload.signedUrl);
+    } else if (module.payload?.uploadedUrl) {
       setPreview(module.payload.uploadedUrl);
+    } else if (module.payload?.fileUrl) {
+      setPreview(module.payload.fileUrl);
     } else if (module.payload?.preview) {
       setPreview(module.payload.preview);
     }
@@ -59,8 +71,8 @@ export default function VideoEditor({ module, onChange }) {
         title,
         payload: {
           ...module.payload,
-          uploadedUrl,          // ✅ used later by publishPhase
-          fileUrl: uploadedUrl,  // ✅ optional alias for backend safety
+          uploadedUrl,          // used later by publishPhase
+          fileUrl: uploadedUrl,  // optional alias for backend safety
           preview: uploadedUrl,
         },
       });

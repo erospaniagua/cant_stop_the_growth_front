@@ -8,9 +8,16 @@ import { uploadToAWS } from "@/utils/uploadToAWS.js";
 export default function PdfEditor({ module, onChange }) {
   const [title, setTitle] = useState(module.title || "");
   const [file, setFile] = useState(module.payload?.file || null);
+
+  // ✅ Prefer signedUrl when available (for reopened published phases)
   const [preview, setPreview] = useState(
-    module.payload?.preview || module.payload?.uploadedUrl || null
+    module.payload?.signedUrl ||
+      module.payload?.uploadedUrl ||
+      module.payload?.fileUrl ||
+      module.payload?.preview ||
+      null
   );
+
   const [uploading, setUploading] = useState(false);
 
   /* ===========================================================
@@ -18,8 +25,13 @@ export default function PdfEditor({ module, onChange }) {
   =========================================================== */
   useEffect(() => {
     setTitle(module.title || "");
-    if (module.payload?.uploadedUrl) {
+
+    if (module.payload?.signedUrl) {
+      setPreview(module.payload.signedUrl);
+    } else if (module.payload?.uploadedUrl) {
       setPreview(module.payload.uploadedUrl);
+    } else if (module.payload?.fileUrl) {
+      setPreview(module.payload.fileUrl);
     } else if (module.payload?.preview) {
       setPreview(module.payload.preview);
     }
@@ -51,8 +63,6 @@ export default function PdfEditor({ module, onChange }) {
       setUploading(true);
 
       const courseId = module.courseId || module._id || "temp";
-
-      // 🔼 Upload directly to S3 staging/<courseId>/
       const uploadedUrl = await uploadToAWS(f, courseId, module.type || "pdf");
 
       // ✅ Update parent with final S3 URL for autosave
@@ -61,8 +71,8 @@ export default function PdfEditor({ module, onChange }) {
         title,
         payload: {
           ...module.payload,
-          uploadedUrl,          // ✅ needed for backend move
-          fileUrl: uploadedUrl,  // ✅ alias for publishPhase safety
+          uploadedUrl,          // used later by publishPhase
+          fileUrl: uploadedUrl,  // alias for backend safety
           preview: uploadedUrl,
         },
       });
@@ -105,7 +115,9 @@ export default function PdfEditor({ module, onChange }) {
         <label
           htmlFor={`pdf-upload-${module._id || "temp"}`}
           className={`cursor-pointer ${
-            uploading ? "text-neutral-500" : "text-green-400 hover:text-green-300"
+            uploading
+              ? "text-neutral-500"
+              : "text-green-400 hover:text-green-300"
           }`}
         >
           {uploading ? "Uploading..." : file ? "Replace PDF" : "Upload PDF"}
