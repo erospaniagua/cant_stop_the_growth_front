@@ -50,25 +50,29 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
      Debounced autosave for title/description
   =========================================================== */
   useEffect(() => {
-    if (!route?._id) return;
-    setSaving(true);
+  if (!route?._id) return;
 
-    const timer = setTimeout(async () => {
-      try {
-        const updated = await apiClient.patch(`/api/learning-routes/${route._id}`, {
-          title: routeTitle,
-          description: routeDesc,
-        });
-        setRoute(updated);
-      } catch (e) {
-        console.error("Route autosave failed:", e);
-      } finally {
-        setSaving(false);
-      }
-    }, 600);
+  const timer = setTimeout(async () => {
+    try {
+      await apiClient.patch(`/api/learning-routes/${route._id}`, {
+        title: routeTitle,
+        description: routeDesc,
+      });
+      // ✅ don’t replace the entire route object!
+      setRoute((prev) => ({
+        ...prev,
+        title: routeTitle,
+        description: routeDesc,
+      }));
+    } catch (e) {
+      console.error("Route autosave failed:", e);
+    } finally {
+      setSaving(false);
+    }
+  }, 600);
 
-    return () => clearTimeout(timer);
-  }, [routeTitle, routeDesc]);
+  return () => clearTimeout(timer);
+}, [routeTitle, routeDesc]);
 
   /* ===========================================================
      Add a new phase to the route
