@@ -1,37 +1,68 @@
 import { apiClient } from "@/api/client.js";
 
 /**
- * Upload a file to S3 via presigned URL.
- * The backend generates a presigned URL in the correct folder:
- *    staging/{courseId}/filename.ext
- *
- * @param {File} file - The file to upload
- * @param {string} courseId - The course ID (used for folder path)
- * @param {string} type - Module type (video/pdf/quiz)
- * @returns {Promise<string>} - The final public file URL on S3
+ * 🔹 Get a presigned URL from backend
  */
-export async function uploadToAWS(file, courseId, type) {
+export async function getPresignedUrl(file, courseId, type) {
+  const { uploadUrl, fileUrl } = await apiClient.post("/api/presign", {
+    filename: file.name,
+    folder: `staging/${courseId}`,
+    type,
+  });
+  return { uploadUrl, fileUrl };
+}
+
+/**
+ * 🔹 Upload a file with progress tracking
+ * Works with both video & PDF editors.
+ */
+export async function uploadWithProgress(uploadUrl, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && typeof onProgress === "function") {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        onProgress(percent);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload failed with status ${xhr.status}`));
+    };
+
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.send(file);
+  });
+}
+
+/**
+ * 🔹 Main uploader (simplified, backward-compatible)
+ * If `onProgress` is provided, it uses the progress version.
+ */
+export async function uploadToAWS(file, courseId, type, onProgress) {
   try {
-    // 1️⃣ Ask backend for a presigned upload URL
-    const { uploadUrl, fileUrl } = await apiClient.post("/api/presign", {
-      filename: file.name,
-      folder: `staging/${courseId}`,
-      type,
-    });
+    const { uploadUrl, fileUrl } = await getPresignedUrl(file, courseId, type);
 
-    // 2️⃣ Upload directly to S3 using the presigned URL
-    const res = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-    });
+    if (typeof onProgress === "function") {
+      await uploadWithProgress(uploadUrl, file, onProgress);
+    } else {
+      const res = await fetch(uploadUrl, { method: "PUT", body: file });
+      if (!res.ok) throw new Error("Upload failed");
+    }
 
-    if (!res.ok) throw new Error("Upload to S3 failed");
     console.log("✅ Uploaded to S3:", fileUrl);
-
-    // 3️⃣ Return the public file URL to store in Mongo
     return fileUrl;
   } catch (err) {
     console.error("❌ uploadToAWS failed:", err);
     throw err;
   }
 }
+
+/**
+ * Attach helpers for convenience in editors
+ */
+uploadToAWS.getPresignedUrl = getPresignedUrl;
+uploadToAWS.uploadWithProgress = uploadWithProgress;

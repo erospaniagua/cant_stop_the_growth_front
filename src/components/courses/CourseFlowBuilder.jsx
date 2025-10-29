@@ -42,19 +42,20 @@ function NodeBox({ data, bg }) {
 /* -------------------- NODE TYPES -------------------- */
 const nodeTypes = {
   input: (props) => <NodeBox {...props} bg="#4F46E5" />,
+  moduleBreak: (props) => <NodeBox {...props} bg="#3B82F6" />,
   video: (props) => <NodeBox {...props} bg="#2563EB" />,
   pdf: (props) => <NodeBox {...props} bg="#059669" />,
   quiz: (props) => <NodeBox {...props} bg="#D97706" />,
   cert: (props) => (
-  <NodeBox
-    {...props}
-    bg="#7C3AED"
-    data={{ ...props.data, label: "🏁 Certification" }}
-   />
-   ),
-   };
+    <NodeBox
+      {...props}
+      bg="#7C3AED"
+      data={{ ...props.data, label: "🏁 Certification" }}
+    />
+  ),
+};
 
-/* -------------------- MODULE EDITORS -------------------- */
+/* -------------------- EDITORS -------------------- */
 const moduleEditors = {
   video: VideoEditor,
   pdf: PDFEditor,
@@ -65,9 +66,8 @@ const moduleEditors = {
 /* ======================================================== */
 export default function CourseFlowBuilder({
   courseId,
-  modules = [],
+  modules = [], // [{title, lessons: []}]
   onChange,
-  onUpdateModule,
   readOnly = false,
 }) {
   const { theme } = useTheme();
@@ -91,7 +91,7 @@ export default function CourseFlowBuilder({
   }, [nodes]);
 
   /* ===========================================================
-     🧩 Build from modules (reuse saved positions if any)
+     🔄 Build from modules (Phase -> Modules -> Lessons)
   =========================================================== */
   const buildFromModules = useCallback(() => {
     const base = [
@@ -105,29 +105,42 @@ export default function CourseFlowBuilder({
     ];
 
     const oldPositions = new Map(nodesRef.current.map((n) => [n.id, n.position]));
+    const allNodes = [];
 
-    const newNodes = modules.map((m, i) => {
-      const id = m._id?.toString() || `${i + 1}`;
-      const savedPos = m.payload?.position; // ✅ use saved layout if available
-      const existingPos = oldPositions.get(id);
-      return {
-        id,
-        type: m.type,
-        data: { label: m.title },
-        position: savedPos || existingPos || { x: (i + 1) * 220, y: 150 },
+    modules.forEach((mod, mIndex) => {
+      const modId = `mod-${mIndex + 1}`;
+      allNodes.push({
+        id: modId,
+        type: "moduleBreak",
+        data: { label: mod.title || `Module ${mIndex + 1}` },
+        position: oldPositions.get(modId) || { x: (mIndex + 1) * 250, y: 50 },
         draggable: !readOnly,
-      };
+      });
+
+      (mod.lessons || []).forEach((l, i) => {
+        const id = `${modId}-l${i + 1}`;
+        allNodes.push({
+          id,
+          type: l.type,
+          data: { label: l.title },
+          position:
+            oldPositions.get(id) ||
+            l.payload?.position || { x: (mIndex + 1) * 250 + (i + 1) * 200, y: 150 },
+          draggable: !readOnly,
+        });
+      });
     });
 
-    const all = [...base, ...newNodes];
-
+    const all = [...base, ...allNodes];
     const newEdges = all.slice(0, -1).map((n, i) => ({
       id: `e${n.id}-${all[i + 1].id}`,
       source: n.id,
       target: all[i + 1].id,
       animated: true,
       style: {
-        stroke: isDark ? "rgba(229,231,235,0.4)" : "rgba(255,255,255,0.4)",
+        stroke: isDark
+          ? "rgba(229,231,235,0.4)"
+          : "rgba(255,255,255,0.4)",
         strokeWidth: 0.75,
       },
     }));
@@ -137,119 +150,133 @@ export default function CourseFlowBuilder({
   }, [modules, isDark, readOnly]);
 
   useEffect(() => {
-    if (modules.length) buildFromModules();
+    buildFromModules();
   }, [modules, buildFromModules]);
 
   /* ===========================================================
-     🪄 Persist position changes when user drags nodes
+     🪄 Persist position changes
   =========================================================== */
   const onNodesChange = useCallback(
     (changes) => {
       setNodes((nds) => {
         const updated = applyNodeChanges(changes, nds);
-
-        // 🧠 Persist positions back to modules
         if (onChange && changes.some((c) => c.type === "position")) {
-          const updatedModules = modules.map((m, i) => {
-            const id = m._id?.toString() || `${i + 1}`;
-            const node = updated.find((n) => n.id === id);
-            return {
-              ...m,
-              payload: {
-                ...m.payload,
-                position: node?.position || m.payload?.position,
-              },
-            };
-          });
-          onChange(updatedModules);
+          const grouped = groupNodesIntoModules(updated, modules);
+          onChange(grouped);
         }
-
         return updated;
       });
     },
-    [modules, onChange]
+    [onChange, modules]
   );
 
   /* ===========================================================
-     Add / Remove modules (same as before)
+     ➕ Add new node (module break or lesson)
   =========================================================== */
-  const addModule = (type, title) => {
+  const addNode = (type, title) => {
     if (readOnly) return;
-
-    const id = crypto.randomUUID();
     const last = nodes[nodes.length - 1];
+    const id = crypto.randomUUID();
+
     const newNode = {
       id,
       type,
-      data: { label: title },
+      data: {
+        label:
+          type === "moduleBreak"
+            ? `Module ${modules.length + 1}`
+            : title,
+      },
       position: { x: last.position.x + 220, y: 150 },
       draggable: true,
     };
+
     const newEdge = {
       id: `${last.id}-${id}`,
       source: last.id,
       target: id,
       animated: true,
       style: {
-        stroke: isDark ? "rgba(229,231,235,0.4)" : "rgba(255,255,255,0.4)",
+        stroke: isDark
+          ? "rgba(229,231,235,0.4)"
+          : "rgba(255,255,255,0.4)",
         strokeWidth: 0.75,
       },
     };
 
-    const updatedNodes = [...nodes, newNode];
-    const updatedEdges = [...edges, newEdge];
-    setNodes(updatedNodes);
-    setEdges(updatedEdges);
-
-    const modulesData = [
-      ...modules.map((m, i) => ({
-        ...m,
-        order: i,
-      })),
-      {
-        type,
-        title,
-        order: modules.length,
-        payload: { position: newNode.position }, // ✅ store new node position
-      },
-    ];
-
-    onChange?.(modulesData);
+    const newNodes = [...nodes, newNode];
+    setNodes(newNodes);
+    setEdges([...edges, newEdge]);
+    onChange?.(groupNodesIntoModules(newNodes, modules));
   };
 
   const handleDeleteLast = () => {
     if (readOnly || nodes.length <= 1) return;
-
     const newNodes = nodes.slice(0, -1);
-    const newEdges = edges.filter(
-      (e) => e.target !== nodes[nodes.length - 1].id
-    );
-
     setNodes(newNodes);
-    setEdges(newEdges);
-
-    const newModules = modules.slice(0, -1).map((m, i) => ({
-      ...m,
-      order: i,
-    }));
-
-    onChange?.(newModules);
+    setEdges(edges.filter((e) => e.target !== nodes[nodes.length - 1].id));
+    onChange?.(groupNodesIntoModules(newNodes, modules));
   };
 
   /* ===========================================================
-     Node click → open editor modal
+     🔍 Group nodes -> modules structure (preserve payloads)
   =========================================================== */
-  const handleNodeClick = (_, node) => {
-    if (readOnly || node.id === "start") return;
-    const idx = modules.findIndex(
-      (m, i) => m._id?.toString() === node.id || `${i + 1}` === node.id
-    );
-    if (idx === -1) return;
-    const module = modules[idx];
-    setActiveNode({ idx, module });
+  const groupNodesIntoModules = (allNodes, prevModules = []) => {
+    const result = [];
+    let currentModule = null;
+
+    const findOldLesson = (title) =>
+      prevModules
+        .flatMap((m) => m.lessons || [])
+        .find((l) => l.title === title);
+
+    allNodes.forEach((n) => {
+      if (n.type === "moduleBreak") {
+        if (currentModule) result.push(currentModule);
+        currentModule = { title: n.data.label, lessons: [] };
+      } else if (!["input"].includes(n.type)) {
+        if (!currentModule) currentModule = { title: "Module 1", lessons: [] };
+        const oldLesson = findOldLesson(n.data.label);
+        currentModule.lessons.push({
+          type: n.type,
+          title: n.data.label,
+          payload: {
+            ...oldLesson?.payload,
+            position: n.position,
+          },
+        });
+      }
+    });
+    if (currentModule) result.push(currentModule);
+    return result;
   };
 
-  /* -------------------- Blueprint Style -------------------- */
+  /* ===========================================================
+     🖱️ Node click → open lesson editor
+  =========================================================== */
+  const handleNodeClick = (_, node) => {
+    if (readOnly || node.type === "input" || node.type === "moduleBreak") return;
+    const grouped = groupNodesIntoModules(nodes, modules);
+    let foundModuleIndex = -1;
+    let foundLesson = null;
+
+    grouped.forEach((mod, i) => {
+      mod.lessons.forEach((l, li) => {
+        const nodeId = `${mod.title}-l${li + 1}`;
+        if (l.title === node.data.label && !foundLesson) {
+          foundModuleIndex = i;
+          foundLesson = { ...l, index: li, id: node.id };
+        }
+      });
+    });
+
+    if (foundLesson)
+      setActiveNode({ moduleIndex: foundModuleIndex, lesson: foundLesson });
+  };
+
+  /* ===========================================================
+     🌈 Styling
+  =========================================================== */
   const bgColor = isDark ? "#1E1E1E" : "#1E3A8A";
   const gridGap = 80;
 
@@ -257,10 +284,9 @@ export default function CourseFlowBuilder({
      Render
   =========================================================== */
   const EditorComponent =
-  activeNode?.module?.type &&
-  activeNode.module.type !== "cert" && // 🧩 skip cert modules
-  moduleEditors[activeNode.module.type];
-
+    activeNode?.lesson?.type &&
+    activeNode.lesson.type !== "cert" &&
+    moduleEditors[activeNode.lesson.type];
 
   return (
     <div className="relative w-full h-full overflow-hidden" tabIndex={0}>
@@ -283,8 +309,16 @@ export default function CourseFlowBuilder({
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: `linear-gradient(${isDark ? "rgba(229,231,235,0.08)" : "rgba(255,255,255,0.08)"} 1px, transparent 1px),
-                              linear-gradient(90deg, ${isDark ? "rgba(229,231,235,0.08)" : "rgba(255,255,255,0.08)"} 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(${
+              isDark
+                ? "rgba(229,231,235,0.08)"
+                : "rgba(255,255,255,0.08)"
+            } 1px, transparent 1px),
+            linear-gradient(90deg, ${
+              isDark
+                ? "rgba(229,231,235,0.08)"
+                : "rgba(255,255,255,0.08)"
+            } 1px, transparent 1px)`,
             backgroundSize: "80px 80px",
             zIndex: 0,
           }}
@@ -295,69 +329,90 @@ export default function CourseFlowBuilder({
 
       {!readOnly && (
         <div className="absolute top-4 left-4 flex flex-wrap gap-2 bg-neutral-900/80 backdrop-blur-md p-3 rounded-lg shadow-lg">
-          <button onClick={() => addModule("video", "Video Lesson")} className="px-3 py-2 bg-blue-600 text-white rounded text-sm">
+          <button
+            onClick={() => addNode("moduleBreak", "Module")}
+            className="px-3 py-2 bg-blue-500 text-white rounded text-sm"
+          >
+            + Module Break
+          </button>
+          <button
+            onClick={() => addNode("video", "Video Lesson")}
+            className="px-3 py-2 bg-blue-600 text-white rounded text-sm"
+          >
             + Video
           </button>
-          <button onClick={() => addModule("pdf", "Lecture (PDF)")} className="px-3 py-2 bg-green-600 text-white rounded text-sm">
+          <button
+            onClick={() => addNode("pdf", "Lecture (PDF)")}
+            className="px-3 py-2 bg-green-600 text-white rounded text-sm"
+          >
             + PDF
           </button>
-          <button onClick={() => addModule("quiz", "Test")} className="px-3 py-2 bg-yellow-500 text-black rounded text-sm">
+          <button
+            onClick={() => addNode("quiz", "Test")}
+            className="px-3 py-2 bg-yellow-500 text-black rounded text-sm"
+          >
             + Test
           </button>
-          <button onClick={() => addModule("cert", "Certification")} className="px-3 py-2 bg-purple-600 text-white rounded text-sm">
+          <button
+            onClick={() => addNode("cert", "Certification")}
+            className="px-3 py-2 bg-purple-600 text-white rounded text-sm"
+          >
             + Cert
           </button>
-          <button onClick={handleDeleteLast} className="px-3 py-2 border border-red-500 text-red-500 rounded text-sm">
+          <button
+            onClick={handleDeleteLast}
+            className="px-3 py-2 border border-red-500 text-red-500 rounded text-sm"
+          >
             − Remove last
           </button>
         </div>
       )}
 
-      {/* 🧩 Active Module Editor */}
       {EditorComponent && activeNode && (
-       <div
-        className="absolute inset-0 bg-black/60 flex justify-center z-50"
-        style={{
-        alignItems: "flex-start",   // 🧩 start from top instead of center
-        paddingTop: "5vh",          // ✅ adds space from top (visible close button)
-        overflowY: "auto",
-        }}
-       >
-       <div className="relative bg-neutral-900 text-white w-[700px] max-h-[90vh] rounded-xl p-6 overflow-y-auto shadow-lg">
-       <button
-        onClick={() => setActiveNode(null)}
-        className="absolute top-3 right-3 text-neutral-400 hover:text-white"
-       >
-        ✕
-       </button>
-
+        <div
+          className="absolute inset-0 bg-black/60 flex justify-center z-50"
+          style={{
+            alignItems: "flex-start",
+            paddingTop: "5vh",
+            overflowY: "auto",
+          }}
+        >
+          <div className="relative bg-neutral-900 text-white w-[700px] max-h-[90vh] rounded-xl p-6 overflow-y-auto shadow-lg">
+            <button
+              onClick={() => setActiveNode(null)}
+              className="absolute top-3 right-3 text-neutral-400 hover:text-white"
+            >
+              ✕
+            </button>
 
             <EditorComponent
-              module={{ ...activeNode.module, courseId }}
+              module={{ ...activeNode.lesson, courseId }}
               onChange={(data) => {
-                const updated = [...modules];
-                const idx = activeNode.idx;
-                const mod = activeNode.module;
+  const grouped = structuredClone(groupNodesIntoModules(nodes, modules));
+  const modIdx = activeNode.moduleIndex;
 
-                const mergedPayload = { ...mod.payload, ...data.payload };
-                updated[idx] = {
-                  ...mod,
-                  title: data.title || mod.title,
-                  payload: mergedPayload,
-                };
+  // 🧱 Build a clean updated lesson object
+  const updatedLesson = {
+    ...activeNode.lesson,
+    title: data.title ?? activeNode.lesson.title,
+    payload: {
+      ...activeNode.lesson.payload,
+      ...data.payload,
+    },
+  };
 
-                onChange?.(updated);
+  // ✅ Safely replace (no direct mutation)
+  if (grouped[modIdx]?.lessons) {
+    grouped[modIdx].lessons = grouped[modIdx].lessons.map((l, idx) =>
+      idx === activeNode.lesson.index ? updatedLesson : l
+    );
+  }
 
-                if (onUpdateModule) {
-                  const idKey = mod._id || mod.tempId || idx;
-                  onUpdateModule(idKey, {
-                    title: data.title || mod.title,
-                    payload: mergedPayload,
-                  });
-                }
+  // 🔄 Update parent + local active node
+  onChange?.(structuredClone(grouped)); // force React to detect a new object
+  setActiveNode({ moduleIndex: modIdx, lesson: updatedLesson });
+}}
 
-                setActiveNode({ idx, module: updated[idx] });
-              }}
             />
           </div>
         </div>
