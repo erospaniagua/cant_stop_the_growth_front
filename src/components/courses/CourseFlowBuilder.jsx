@@ -42,7 +42,7 @@ function NodeBox({ data, bg }) {
 /* -------------------- NODE TYPES -------------------- */
 const nodeTypes = {
   input: (props) => <NodeBox {...props} bg="#4F46E5" />,
-  moduleBreak: (props) => <NodeBox {...props} bg="#3B82F6" />,
+  moduleBreak: (props) => <NodeBox {...props} bg="#F00" />,
   video: (props) => <NodeBox {...props} bg="#2563EB" />,
   pdf: (props) => <NodeBox {...props} bg="#059669" />,
   quiz: (props) => <NodeBox {...props} bg="#D97706" />,
@@ -331,7 +331,7 @@ export default function CourseFlowBuilder({
         <div className="absolute top-4 left-4 flex flex-wrap gap-2 bg-neutral-900/80 backdrop-blur-md p-3 rounded-lg shadow-lg">
           <button
             onClick={() => addNode("moduleBreak", "Module")}
-            className="px-3 py-2 bg-blue-500 text-white rounded text-sm"
+            className="px-3 py-2 bg-red-500 text-white rounded text-sm"
           >
             + Module Break
           </button>
