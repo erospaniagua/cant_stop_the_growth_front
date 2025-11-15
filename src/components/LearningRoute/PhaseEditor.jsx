@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { apiClient } from "@/api/client.js";
-import CourseFlowBuilder from "@/components/courses/CourseFlowBuilder";
-import QuizEditor from "@/components/courses/QuizEditor";
-import VideoEditor from "@/components/courses/VideoEditor";
-import PdfEditor from "@/components/courses/PdfEditor";
+import CourseFlowBuilder from "@/components/LearningRoute/CourseFlowBuilder";
+import QuizEditor from "@/components/LearningRoute/QuizEditor";
+import VideoEditor from "@/components/LearningRoute/VideoEditor";
+import PdfEditor from "@/components/LearningRoute/PdfEditor";
 
 export default function PhaseEditor({ open, onClose, routeId, phaseId, refresh }) {
   const { theme } = useTheme();

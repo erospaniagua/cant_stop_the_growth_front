@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import Layout from "@/components/Layout"
 import Dashboard from "@/pages/Dashboard"
-import Courses from "@/pages/Courses"
+import LearningRoutesPage from "@/pages/LearningRoutes"
 import Companies from "@/pages/Companies"
 import Coaches from "@/pages/Coaches"
 import Students from "@/pages/Students"
@@ -11,6 +11,9 @@ import Settings from "@/pages/Settings"
 import Login from "@/pages/Login"
 import Users from "@/pages/Users"
 import ProtectedRoute from "@/components/ProtectedRoute"
+import MyLearningRoutesPage from "./pages/MyLearningRoutes"
+import MyLearningRoutePreview from "./components/routes/MyLearningRoutePreview"
+import MyLearningLessonPlayer from "./components/routes/MyLearningLessonPlayer.jsx"
 
 function App() {
   return (
@@ -44,7 +47,7 @@ function App() {
         />
         <Route
           path="/learning-routes"
-          element={<ProtectedRoute path="/learning-routes" element={<Courses />} />}
+          element={<ProtectedRoute path="/learning-routes" element={<LearningRoutesPage />} />}
         />
         <Route
           path="/students"
@@ -62,7 +65,25 @@ function App() {
           path="/managers"
           element={<ProtectedRoute path="/managers" element={<Dashboard />} />}
         />
+        <Route
+          path="/my-learning-routes"
+          element={<ProtectedRoute path="/my-learning-routes" element={<MyLearningRoutesPage />} />}
+        />
+        <Route
+         path="/my-learning-routes/:routeId"
+         element={<ProtectedRoute path="/my-learning-routes/:routeId" element={<MyLearningRoutePreview />} />}
+        />
+        <Route
+        path="/my-learning-routes/:routeId/lessons/:lessonId"
+        element={
+        <ProtectedRoute
+         path="/my-learning-routes/:routeId/lessons/:lessonId"
+         element={<MyLearningLessonPlayer />}
+        />
+       }
+      />
       </Route>
+      
     </Routes>
   )
 }

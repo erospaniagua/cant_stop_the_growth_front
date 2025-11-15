@@ -4,73 +4,78 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
-import { useUser } from "@/context/UserContext"
-import UserConfirmDialog from "./UserConfirmDialog"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { useUser } from "@/context/UserContext";
+import UserConfirmDialog from "./UserConfirmDialog";
 
-// 🧩 Password validation regex (8+ chars, 1 uppercase, 1 number)
-const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 function validatePassword(password) {
-  if (!password) return { ok: false, message: "Password is required" }
+  if (!password) return { ok: false, message: "Password is required" };
   if (!PASSWORD_REGEX.test(password)) {
     return {
       ok: false,
       message:
         "Password must be at least 8 characters long, include at least one uppercase letter and one number.",
-    }
+    };
   }
-  return { ok: true }
+  return { ok: true };
 }
 
-// 🧠 Simple temp password generator
 function generateTempPassword() {
-  const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-  const lowers = "abcdefghijklmnopqrstuvwxyz"
-  const digits = "0123456789"
-  const all = uppers + lowers + digits
-  let pwd = ""
-  pwd += uppers[Math.floor(Math.random() * uppers.length)]
-  pwd += digits[Math.floor(Math.random() * digits.length)]
+  const uppers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowers = "abcdefghijklmnopqrstuvwxyz";
+  const digits = "0123456789";
+  const all = uppers + lowers + digits;
+  let pwd = "";
+  pwd += uppers[Math.floor(Math.random() * uppers.length)];
+  pwd += digits[Math.floor(Math.random() * digits.length)];
   for (let i = 0; i < 8; i++) {
-    pwd += all[Math.floor(Math.random() * all.length)]
+    pwd += all[Math.floor(Math.random() * all.length)];
   }
-  return pwd.split("").sort(() => Math.random() - 0.5).join("") // shuffle
+  return pwd.split("").sort(() => Math.random() - 0.5).join("");
 }
+
+const CATEGORY_OPTIONS = [
+  "Leadership",
+  "Service",
+  "Sales",
+  "Office Staff",
+  "Install",
+];
 
 export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
-  const { token, user: currentUser } = useUser()
-  const [companies, setCompanies] = useState([])
-  const [openConfirm, setOpenConfirm] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const { token, user: currentUser } = useUser();
+  const [companies, setCompanies] = useState([]);
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     role: "coach",
     companyId: "",
-  })
+    categories: [],
+  });
 
-  // 🧭 Load companies for dropdown
   useEffect(() => {
-    if (open) fetchCompanies()
-  }, [open])
+    if (open) fetchCompanies();
+  }, [open]);
 
   const fetchCompanies = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/companies", {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      setCompanies(data)
+      });
+      const data = await res.json();
+      setCompanies(data);
     } catch (err) {
-      console.error("Error loading companies", err)
+      console.error("Error loading companies", err);
     }
-  }
+  };
 
-  // 🧩 Prefill when editing
   useEffect(() => {
     if (user) {
       setForm({
@@ -79,7 +84,8 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         password: "",
         role: user.role,
         companyId: user.companyId?._id || "",
-      })
+        categories: user.categories || [],
+      });
     } else {
       setForm({
         name: "",
@@ -87,40 +93,56 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         password: "",
         role: "coach",
         companyId: "",
-      })
+        categories: [],
+      });
     }
-  }, [user])
+  }, [user]);
 
-  // 🧠 Roles that require a company link
-  const rolesRequiringCompany = ["company", "student", "team-manager"]
-  const requiresCompany = rolesRequiringCompany.includes(form.role)
+  const rolesRequiringCompany = ["company", "student", "team-manager"];
+  const requiresCompany = rolesRequiringCompany.includes(form.role);
+  const requiresCategories = ["student", "team-manager"].includes(form.role);
 
-  // ✨ Generate random password
   const handleGeneratePassword = () => {
-    const newPass = generateTempPassword()
-    setForm({ ...form, password: newPass })
-  }
+    const newPass = generateTempPassword();
+    setForm({ ...form, password: newPass });
+  };
 
-  // 🧩 Create or edit
+  const toggleCategory = (cat) => {
+    setForm((prev) => {
+      const exists = prev.categories.includes(cat);
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter((c) => c !== cat)
+          : [...prev.categories, cat],
+      };
+    });
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    // Validate password only for new user
     if (!user) {
-      const { ok, message } = validatePassword(form.password)
+      const { ok, message } = validatePassword(form.password);
       if (!ok) {
-        alert(message)
-        return
+        alert(message);
+        return;
       }
     }
 
-    const method = user ? "PUT" : "POST"
+    if (requiresCategories && form.categories.length === 0) {
+      alert("Please select at least one category.");
+      return;
+    }
+
+    const method = user ? "PUT" : "POST";
     const url = user
       ? `http://localhost:5000/api/users/${user._id}`
-      : `http://localhost:5000/api/users`
+      : `http://localhost:5000/api/users`;
 
-    const body = { ...form }
-    if (!requiresCompany) delete body.companyId
+    const body = { ...form };
+    if (!requiresCompany) delete body.companyId;
+    if (!requiresCategories) delete body.categories;
 
     const res = await fetch(url, {
       method,
@@ -129,23 +151,19 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
-    })
+    });
 
-    const data = await res.json()
+    const data = await res.json();
     if (res.ok) {
-      onOpenChange(false)
-      onRefresh()
+      onOpenChange(false);
+      onRefresh();
     } else {
-      alert(data.message)
+      alert(data.message);
     }
-  }
+  };
 
-  // 🧱 Handle archive toggle (opens confirm dialog)
-  const handleArchive = () => {
-    setOpenConfirm(true)
-  }
+  const handleArchive = () => setOpenConfirm(true);
 
-  // 🧩 Actually send archive request after confirmation
   const confirmArchive = async (masterKey) => {
     try {
       const res = await fetch(
@@ -158,37 +176,35 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
           },
           body: JSON.stringify({ masterKey }),
         }
-      )
-      const data = await res.json()
+      );
+      const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || "Error archiving user")
-        return
+        alert(data.message || "Error archiving user");
+        return;
       }
 
-      alert(data.message)
-      setOpenConfirm(false)
-      onOpenChange(false)
-      onRefresh()
+      alert(data.message);
+      setOpenConfirm(false);
+      onOpenChange(false);
+      onRefresh();
     } catch (err) {
-      console.error("Error archiving user:", err)
-      alert("Unexpected error")
+      console.error("Error archiving user:", err);
+      alert("Unexpected error");
     }
-  }
+  };
 
-  // 🚫 Prevent showing Archive if editing own account
-  const canArchive = user && currentUser?.id !== user._id
+  const canArchive = user && currentUser?.id !== user._id;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{user ? "Edit User" : "Add User"}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Name */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Name"
@@ -197,7 +213,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               required
             />
 
-            {/* Email */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Email"
@@ -207,7 +222,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               required
             />
 
-            {/* Password field (only on create) */}
             {!user && (
               <div>
                 <div className="flex gap-2 mb-2">
@@ -241,7 +255,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </div>
             )}
 
-            {/* Role */}
             <select
               className="border rounded p-2 w-full"
               value={form.role}
@@ -254,7 +267,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               <option value="team-manager">Team Manager</option>
             </select>
 
-            {/* Company dropdown if required */}
             {requiresCompany && (
               <select
                 className="border rounded p-2 w-full"
@@ -272,7 +284,28 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </select>
             )}
 
-            {/* Footer buttons */}
+            {/* 🏷️ Category checkboxes for student & team-manager */}
+            {requiresCategories && (
+              <div className="border rounded p-2">
+                <label className="block mb-2 font-medium text-sm">
+                  Categories
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <label key={cat} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.categories.includes(cat)}
+                        onChange={() => toggleCategory(cat)}
+                        className="accent-red-500"
+                      />
+                      <span>{cat}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <DialogFooter className="flex justify-between gap-2 pt-2">
               {canArchive && (
                 <Button
@@ -291,12 +324,11 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         </DialogContent>
       </Dialog>
 
-      {/* 🔒 Confirmation modal for master key */}
       <UserConfirmDialog
         open={openConfirm}
         onOpenChange={setOpenConfirm}
         onConfirm={confirmArchive}
       />
     </>
-  )
+  );
 }

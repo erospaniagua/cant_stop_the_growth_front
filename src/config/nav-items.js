@@ -18,7 +18,7 @@ export const navItems = {
     { title: "settings", href: "/settings", icon: Settings }
   ],
   student: [
-    { title: "courses", href: "/courses", icon: GraduationCap },
+    { title: "My Learning Routes", href: "/my-learning-routes", icon: GraduationCap },
     { title: "settings", href: "/settings", icon: Settings }
   ],
   company: [

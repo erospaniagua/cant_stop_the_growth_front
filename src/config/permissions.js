@@ -21,15 +21,16 @@ export const permissions = {
     },
   },
   student: {
-    routes: ["/", "/courses", "/settings"],
-    can: {
-      addCompany: false,
-      addCourse: false,
-      addStudent: false,
-      editCourse: false,
-      changeLanguage: true,
-    },
+  routes: ["/", "/my-learning-routes", "/my-learning-routes/:routeId", "/settings","/my-learning-routes/:routeId/lessons/:lessonId"],
+  can: {
+    addCompany: false,
+    addCourse: false,
+    addStudent: false,
+    editCourse: false,
+    changeLanguage: true,
   },
+},
+
   company: {
     routes: ["/", "/courses", "/settings"],
     can: {

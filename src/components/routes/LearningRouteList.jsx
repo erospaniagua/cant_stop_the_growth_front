@@ -97,6 +97,18 @@ export default function LearningRouteList() {
                 <p className="text-sm text-neutral-700 dark:text-neutral-400 mb-2 line-clamp-2">
                   {r.description || "No description"}
                 </p>
+                 {r.categories?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                  {r.categories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700"
+                  >
+                 {cat}
+                 </span>
+                 ))}
+                 </div>
+                 )}
                 <p className="text-xs text-neutral-500 dark:text-neutral-500">
                   {r.phases?.length || 0} phases •{" "}
                   {r.finished ? "✅ Published" : "🕓 Draft"}

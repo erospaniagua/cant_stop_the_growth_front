@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/api/client.js";
-import PhaseEditor from "@/components/courses/PhaseEditor"; // modal for editing phases
+import PhaseEditor from "@/components/LearningRoute/PhaseEditor";
+
+const CATEGORY_OPTIONS = [
+  "Leadership",
+  "Service",
+  "Sales",
+  "Office Staff",
+  "Install",
+];
 
 export default function LearningRouteEditor({ open, onClose, routeId, refresh }) {
   const [route, setRoute] = useState(null);
   const [routeTitle, setRouteTitle] = useState("");
   const [routeDesc, setRouteDesc] = useState("");
+  const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -20,78 +29,79 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
     if (!open || hasBootstrapped.current) return;
     hasBootstrapped.current = true;
 
-    if (routeId) {
-      setLoading(true);
-      apiClient
-        .get(`/api/learning-routes/${routeId}`)
-        .then((data) => {
+    const loadRoute = async () => {
+      if (routeId) {
+        setLoading(true);
+        try {
+          const data = await apiClient.get(`/api/learning-routes/${routeId}`);
           setRoute(data);
           setRouteTitle(data.title || "");
           setRouteDesc(data.description || "");
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setCreating(true);
-      apiClient
-        .post("/api/learning-routes", {
-          title: "Untitled Learning Route",
-          description: "",
-        })
-        .then((data) => {
+          setCategories(data.categories || []);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setCreating(true);
+        try {
+          const data = await apiClient.post("/api/learning-routes", {
+            title: "Untitled Learning Route",
+            description: "",
+            categories: ["Leadership"],
+          });
           setRoute(data);
           setRouteTitle(data.title || "");
           setRouteDesc(data.description || "");
-        })
-        .finally(() => setCreating(false));
-    }
+          setCategories(data.categories || []);
+        } finally {
+          setCreating(false);
+        }
+      }
+    };
+
+    loadRoute();
   }, [open, routeId]);
 
   /* ===========================================================
-   Debounced autosave for title/description (real-time feedback)
+     Debounced autosave for title/description/categories
   =========================================================== */
-useEffect(() => {
-  if (!route?._id) return;
+  useEffect(() => {
+    if (!route?._id) return;
+    setSaving(true);
 
-  // 🕓 Immediately show “Saving…” when user types
-  setSaving(true);
+    const timer = setTimeout(async () => {
+      try {
+        await apiClient.patch(`/api/learning-routes/${route._id}`, {
+          title: routeTitle,
+          description: routeDesc,
+          categories,
+        });
+        setRoute((prev) => ({
+          ...prev,
+          title: routeTitle,
+          description: routeDesc,
+          categories,
+        }));
+      } catch (e) {
+        console.error("Route autosave failed:", e);
+      } finally {
+        setSaving(false);
+      }
+    }, 600);
 
-  const timer = setTimeout(async () => {
-    try {
-      await apiClient.patch(`/api/learning-routes/${route._id}`, {
-        title: routeTitle,
-        description: routeDesc,
-      });
-
-      // ✅ Update local route safely
-      setRoute((prev) => ({
-        ...prev,
-        title: routeTitle,
-        description: routeDesc,
-      }));
-
-      // ✅ Done saving
-      setSaving(false);
-    } catch (e) {
-      console.error("Route autosave failed:", e);
-      // Show an error state briefly if you want
-      setSaving(false);
-    }
-  }, 600);
-
-  return () => clearTimeout(timer);
-}, [routeTitle, routeDesc]);
-
+    return () => clearTimeout(timer);
+  }, [routeTitle, routeDesc, categories]);
 
   /* ===========================================================
-     Add a new phase to the route
+     Add a new phase
   =========================================================== */
   const handleAddPhase = async () => {
     if (!route?._id) return;
     try {
-      const updated = await apiClient.post(`/api/learning-routes/${route._id}/phases`, {
-        title: `Phase ${route.phases?.length + 1 || 1}`,
-        description: "",
-      });
+      const updated = await apiClient.post(
+        `/api/learning-routes/${route._id}/phases`,
+        { title: `Phase ${route.phases?.length + 1 || 1}`, description: "" }
+      );
       setRoute(updated);
     } catch (err) {
       console.error("Error adding phase:", err);
@@ -100,14 +110,15 @@ useEffect(() => {
   };
 
   /* ===========================================================
-     Publish the entire learning route (not a single phase)
+     Publish the route
   =========================================================== */
   const handlePublish = async () => {
     if (!route?._id) return;
     setPublishing(true);
     try {
-      // ✅ this publishes the WHOLE learning route, not individual phases
-      const res = await apiClient.patch(`/api/learning-routes/${route._id}/publish`);
+      const res = await apiClient.patch(
+        `/api/learning-routes/${route._id}/publish`
+      );
       setRoute(res.route || res);
       alert("✅ Learning Route published!");
       refresh?.();
@@ -123,6 +134,14 @@ useEffect(() => {
   const handleClose = () => {
     hasBootstrapped.current = false;
     onClose?.();
+  };
+
+  const toggleCategory = (cat) => {
+    setCategories((prev) =>
+      prev.includes(cat)
+        ? prev.filter((c) => c !== cat)
+        : [...prev, cat]
+    );
   };
 
   if (!open) return null;
@@ -174,7 +193,29 @@ useEffect(() => {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-120px)]">
+        {/* Category selection */}
+        <div className="border rounded-lg p-4 bg-neutral-50 dark:bg-neutral-900/40 border-neutral-300 dark:border-neutral-800">
+          <label className="block mb-2 text-sm font-medium">Categories</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {CATEGORY_OPTIONS.map((cat) => (
+              <label
+                key={cat}
+                className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300"
+              >
+                <input
+                  type="checkbox"
+                  checked={categories.includes(cat)}
+                  onChange={() => toggleCategory(cat)}
+                  className="accent-blue-600"
+                />
+                <span>{cat}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Phase list */}
         {loading || creating ? (
           <p className="text-neutral-600 dark:text-neutral-400">Loading…</p>
         ) : route?.phases?.length ? (
@@ -188,7 +229,7 @@ useEffect(() => {
                   {p.title || `Phase ${i + 1}`}
                 </h3>
                 <button
-                  onClick={() => setShowPhaseEditor(p.course._id)} // ✅ this sets the selected phase
+                  onClick={() => setShowPhaseEditor(p.course._id)}
                   className="text-sm text-blue-500 dark:text-blue-300 hover:underline"
                 >
                   Open Editor →
@@ -212,8 +253,8 @@ useEffect(() => {
         <PhaseEditor
           open={!!showPhaseEditor}
           onClose={() => setShowPhaseEditor(null)}
-          routeId={route._id}       // ✅ correct parent route ID
-          phaseId={showPhaseEditor} // ✅ selected phase ID
+          routeId={route._id}
+          phaseId={showPhaseEditor}
           refresh={() =>
             apiClient.get(`/api/learning-routes/${route._id}`).then(setRoute)
           }
