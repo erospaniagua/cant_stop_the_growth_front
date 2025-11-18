@@ -1,15 +1,23 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import "./index.css";
+import App from "./App.jsx";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { UserProvider } from "@/context/UserContext";
+import { LanguageProvider } from "@/context/LanguageContext";
+import "./lib/i18n";
 
-document.body.classList.add('dark')
-
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <SidebarProvider>       
-      <App />
-    </SidebarProvider>
-  </StrictMode>,
-)
+    <BrowserRouter>
+      <ThemeProvider>
+        <UserProvider>
+          <LanguageProvider>
+            <App />
+          </LanguageProvider>
+        </UserProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+  </StrictMode>
+);
