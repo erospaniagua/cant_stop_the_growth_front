@@ -35,6 +35,21 @@ export default function MyLearningLessonPlayer() {
     })();
   }, [routeId, lessonId]);
 
+
+  useEffect(() => {
+  if (!completed) return;
+
+  (async () => {
+    try {
+      await apiClient.patch(`/api/progress/${routeId}/lesson/${lessonId}/complete`);
+      console.log("Progress synced");
+    } catch (err) {
+      console.error("Failed syncing progress:", err);
+    }
+  })();
+}, [completed, routeId, lessonId]);
+
+
   /* ===========================================================
      Indexing logic (prev / next)
   =========================================================== */

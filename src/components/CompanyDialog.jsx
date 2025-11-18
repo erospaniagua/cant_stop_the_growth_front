@@ -1,32 +1,53 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Pencil, Upload } from "lucide-react"
-import { useTranslation } from "react-i18next"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Pencil, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useUser } from "@/context/UserContext";
 
-// =========================================================
-// CompanyForm
-// =========================================================
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
+/* =========================================================
+   CompanyForm
+========================================================= */
 export function CompanyForm({ mode = "add", data = null, onSubmit }) {
-  const { t } = useTranslation()
-  const fileInputRef = useRef(null)
-  const logoInputRef = useRef(null)
+  const { t } = useTranslation();
+  const { token } = useUser();
 
-  // Mock dropdown options (single select fields)
-  const coachOptions = ["Danny Vega", "Alice Parker", "Tomás Aguilar"]
-  const salesmanOptions = ["Sofia Ramirez", "Liam Cohen", "Alex Wang"]
-  const successManagerOptions = ["Elena Cruz", "Miguel Torres", "Ryan Lee"]
-  const subscriptionOptions = ["Leadership", "Service", "Sales", "Office Staff", "Install"]
-  const serviceOptions = ["Onsite", "Career Mapping", "Onboarding Development"]
+  const fileInputRef = useRef(null);
+  const logoInputRef = useRef(null);
+
+  const normalizeDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  return date.toISOString().split("T")[0]; // "YYYY-MM-DD"
+};
+
+  // Dropdown options (mock for now)
+  const coachOptions = ["Danny Vega", "Alice Parker", "Tomás Aguilar"];
+  const salesmanOptions = ["Sofia Ramirez", "Liam Cohen", "Alex Wang"];
+  const successManagerOptions = ["Elena Cruz", "Miguel Torres", "Ryan Lee"];
+  const subscriptionOptions = [
+    "Leadership",
+    "Service",
+    "Sales",
+    "Office Staff",
+    "Install",
+  ];
+  const serviceOptions = [
+    "Onsite",
+    "Career Mapping",
+    "Onboarding Development",
+  ];
 
   const [formData, setFormData] = useState({
     name: "",
@@ -45,217 +66,207 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     revenue: "",
     quote: null,
     logo: null,
-  })
+  });
 
-  const [errors, setErrors] = useState({})
-  const [isView, setIsView] = useState(mode === "view")
-  const [currentMode, setCurrentMode] = useState(mode)
+  const [errors, setErrors] = useState({});
+  const [isView, setIsView] = useState(mode === "view");
+  const [currentMode, setCurrentMode] = useState(mode);
 
-  
-
+  /* =========================================================
+     Load data when editing
+  ========================================================= */
   useEffect(() => {
-    if (data) {
-      setFormData((prev) => ({
-        ...prev,
-        ...data,
-        subscription: data.subscription || [],
-        additionalServices: data.additionalServices || [],
-        trade: data.trade || { hvac: false, plumbing: false, electrical: false },
-      }))
-    }
-  }, [data])
+  if (data) {
+    setFormData((prev) => ({
+      ...prev,
+      ...data,
+      subscription: data.subscription || [],
+      additionalServices: data.additionalServices || [],
+      trade: data.trade || { hvac: false, plumbing: false, electrical: false },
 
-  // -------------------------------------------------------
-  // Validation
-  // -------------------------------------------------------
+      // FIXED DATE FIELDS
+      kickoffDay: normalizeDate(data.kickoffDay),
+      onsiteDay: normalizeDate(data.onsiteDay),
+    }));
+  }
+}, [data]);
+
+  /* =========================================================
+     Validation
+  ========================================================= */
   const validateField = (field, value) => {
     switch (field) {
       case "name":
-        if (!value.trim()) return t("requiredName")
-        break
+        if (!value.trim()) return t("requiredName");
+        break;
       case "owner":
-        if (!value.trim()) return t("requiredOwner")
-        break
+        if (!value.trim()) return t("requiredOwner");
+        break;
       case "contactEmail":
-        if (!value.trim()) return t("requiredEmail")
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return t("invalidEmail")
-        break
+        if (!value.trim()) return t("requiredEmail");
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value))
+          return t("invalidEmail");
+        break;
       case "contactPhone":
-        if (!value.trim()) return t("requiredPhone")
-        if (!/^[0-9]{7,15}$/.test(value)) return t("invalidPhone")
-        break
+        if (!value.trim()) return t("requiredPhone");
+        if (!/^[0-9]{7,15}$/.test(value)) return t("invalidPhone");
+        break;
       case "type":
-        if (!value) return t("requiredType")
-        break
+        if (!value) return t("requiredType");
+        break;
       case "trade":
-        if (!Object.values(value).some(Boolean)) return t("requiredTrade")
-        break
+        if (!Object.values(value).some(Boolean)) return t("requiredTrade");
+        break;
       case "coach":
-        if (!value) return t("requiredCoach")
-        break
+        if (!value) return t("requiredCoach");
+        break;
       case "salesman":
-        if (!value) return t("requiredSalesman")
-        break
+        if (!value) return t("requiredSalesman");
+        break;
       case "successManager":
-        if (!value) return t("requiredSuccessManager")
-        break
+        if (!value) return t("requiredSuccessManager");
+        break;
       case "revenue":
-        if (!value) return t("requiredRevenue")
-        if (Number(value) <= 0) return t("invalidRevenue")
-        break
+        if (!value) return t("requiredRevenue");
+        if (Number(value) <= 0) return t("invalidRevenue");
+        break;
       default:
-        return ""
+        return "";
     }
-    return ""
-  }
+    return "";
+  };
 
   const validateAll = () => {
-    const newErrors = {}
+    const errs = {};
     Object.entries(formData).forEach(([key, val]) => {
-      const err = validateField(key, val)
-      if (err) newErrors[key] = err
-    })
-    return newErrors
-  }
+      const e = validateField(key, val);
+      if (e) errs[key] = e;
+    });
+    return errs;
+  };
 
   useEffect(() => {
-    setErrors(validateAll())
-  }, [formData])
+    setErrors(validateAll());
+  }, [formData]);
 
-  // -------------------------------------------------------
-  // Handlers
-  // -------------------------------------------------------
+  /* =========================================================
+     Handlers
+  ========================================================= */
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleDrop = (e, field) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files?.[0]
-    if (file) setFormData((prev) => ({ ...prev, [field]: file }))
-  }
+    const { name, value } = e.target;
+    setFormData((p) => ({ ...p, [name]: value }));
+  };
 
   const handleFileSelect = (e, field) => {
-    const file = e.target.files?.[0]
-    if (file) setFormData((prev) => ({ ...prev, [field]: file }))
-  }
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData((p) => ({ ...p, [field]: file }));
+    }
+  };
+
+  const handleDrop = (e, field) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setFormData((p) => ({ ...p, [field]: file }));
+    }
+  };
 
   const handleTrade = (key) => {
-    setFormData((prev) => ({
-      ...prev,
-      trade: { ...prev.trade, [key]: !prev.trade[key] },
-    }))
-  }
+    setFormData((p) => ({
+      ...p,
+      trade: { ...p.trade, [key]: !p.trade[key] },
+    }));
+  };
 
-  const toggleArrayValue = (field, value) => {
-    setFormData((prev) => {
-      const arr = prev[field] || []
+  const toggleArrayValue = (field, value) =>
+    setFormData((p) => {
+      const arr = p[field] || [];
       return {
-        ...prev,
+        ...p,
         [field]: arr.includes(value)
-          ? arr.filter((v) => v !== value)
+          ? arr.filter((x) => x !== value)
           : [...arr, value],
-      }
-    })
-  }
-
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  const newErrors = validateAll();
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    return;
-  }
-
-  // Build form data
-  const formDataToSend = new FormData();
-  Object.entries(formData).forEach(([key, value]) => {
-    if (["trade", "subscription", "additionalServices"].includes(key)) {
-      formDataToSend.append(key, JSON.stringify(value));
-    } else if (key !== "quote" && key !== "logo") {
-      formDataToSend.append(key, value ?? "");
-    }
-  });
-
-  if (formData.quote) formDataToSend.append("quote", formData.quote);
-  if (formData.logo) formDataToSend.append("companyLogo", formData.logo);
-
-  // ✅ Use PUT when editing
-  const companyId = data?._id || formData?._id;
-const isEdit = currentMode === "edit" && companyId;
-
-const url = isEdit
-  ? `http://localhost:5000/api/companies/${companyId}`
-  : "http://localhost:5000/api/companies";
-
-const method = isEdit ? "PUT" : "POST";
-
-console.log("Submitting in mode:", currentMode, "→", method, url);
-
-  try {
-    const response = await fetch(url, {
-      method,
-      body: formDataToSend,
+      };
     });
 
-    if (!response.ok) {
-      const err = await response.json();
-      alert("❌ " + err.message);
+  /* =========================================================
+     Submit
+  ========================================================= */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const newErrors = validateAll();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
-    const result = await response.json();
-    alert(
-      mode === "edit"
-        ? "✅ " + t("companyUpdatedSuccess")
-        : "✅ " + t("companyAddedSuccess")
-    );
+    const fd = new FormData();
 
-    // Reset form (optional for edit)
-    if (mode === "add") {
-      setFormData({
-        name: "",
-        owner: "",
-        contactPhone: "",
-        contactEmail: "",
-        type: "",
-        trade: { hvac: false, plumbing: false, electrical: false },
-        subscription: [],
-        additionalServices: [],
-        coach: "",
-        salesman: "",
-        successManager: "",
-        kickoffDay: "",
-        onsiteDay: "",
-        revenue: "",
-        quote: null,
-        logo: null,
+    Object.entries(formData).forEach(([key, value]) => {
+      if (["trade", "subscription", "additionalServices"].includes(key)) {
+        fd.append(key, JSON.stringify(value));
+      } else if (key !== "quote" && key !== "logo") {
+        fd.append(key, value ?? "");
+      }
+    });
+
+    if (formData.quote) fd.append("quote", formData.quote);
+    if (formData.logo) fd.append("companyLogo", formData.logo);
+
+    const companyId = data?._id;
+    const isEditMode = currentMode === "edit" && companyId;
+
+    const url = isEditMode
+      ? `${API_URL}/api/companies/${companyId}`
+      : `${API_URL}/api/companies`;
+
+    const method = isEditMode ? "PUT" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: fd,
       });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert("❌ " + err.message);
+        return;
+      }
+
+      const result = await res.json();
+
+      alert(
+        isEditMode
+          ? "✅ " + t("companyUpdatedSuccess")
+          : "✅ " + t("companyAddedSuccess")
+      );
+
+      onSubmit?.(result);
+    } catch (err) {
+      console.error(err);
+      alert("❌ Network error");
     }
+  };
 
-    onSubmit?.(result); // let parent refresh the table
-  } catch (error) {
-    console.error("Error submitting form:", error);
-    alert("❌ Network error");
-  }
-};
-
-
-  // -------------------------------------------------------
-  // File preview helpers
-  // -------------------------------------------------------
+  /* =========================================================
+     File preview helper
+  ========================================================= */
   const getFileUrl = (file) => {
-    if (!file) return ""
-    if (file instanceof File) return URL.createObjectURL(file)
-    if (file.startsWith("http")) return file
-    return `http://localhost:5000/${file}`
-  }
+    if (!file) return "";
+    if (file instanceof File) return URL.createObjectURL(file);
+    if (file.startsWith("http")) return file;
+    return `${API_URL}/${file}`;
+  };
 
-  // -------------------------------------------------------
-  // UI
-  // -------------------------------------------------------
+  /* =========================================================
+     UI
+  ========================================================= */
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode !== "add" && isView && (
@@ -263,46 +274,64 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
           <Button
             variant="ghost"
             size="icon"
-            type="button"
-            onClick={() => {setIsView(false)
-                            setCurrentMode("edit")}}
+            onClick={() => {
+              setIsView(false);
+              setCurrentMode("edit");
+            }}
           >
             <Pencil className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Basic Info */}
+      {/* Name */}
       <div className="grid gap-2">
         <Label>{t("name")} *</Label>
-        <Input name="name" value={formData.name} onChange={handleChange} disabled={isView} />
+        <Input
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          disabled={isView}
+        />
         {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
       </div>
 
+      {/* Owner */}
       <div className="grid gap-2">
         <Label>{t("owner")} *</Label>
-        <Input name="owner" value={formData.owner} onChange={handleChange} disabled={isView} />
+        <Input
+          name="owner"
+          value={formData.owner}
+          onChange={handleChange}
+          disabled={isView}
+        />
         {errors.owner && <p className="text-red-500 text-sm">{errors.owner}</p>}
       </div>
 
+      {/* Contact */}
       <div className="grid gap-2">
         <Label>{t("primaryContact")} *</Label>
         <Input
-          placeholder={t("phone")}
           name="contactPhone"
+          placeholder={t("phone")}
           value={formData.contactPhone}
           onChange={handleChange}
           disabled={isView}
         />
-        {errors.contactPhone && <p className="text-red-500 text-sm">{errors.contactPhone}</p>}
+        {errors.contactPhone && (
+          <p className="text-red-500 text-sm">{errors.contactPhone}</p>
+        )}
+
         <Input
-          placeholder={t("email")}
           name="contactEmail"
+          placeholder={t("email")}
           value={formData.contactEmail}
           onChange={handleChange}
           disabled={isView}
         />
-        {errors.contactEmail && <p className="text-red-500 text-sm">{errors.contactEmail}</p>}
+        {errors.contactEmail && (
+          <p className="text-red-500 text-sm">{errors.contactEmail}</p>
+        )}
       </div>
 
       {/* Type */}
@@ -310,8 +339,8 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
         <Label>{t("type")} *</Label>
         <RadioGroup
           value={formData.type}
-          onValueChange={(val) => setFormData((p) => ({ ...p, type: val }))}
           disabled={isView}
+          onValueChange={(v) => setFormData((p) => ({ ...p, type: v }))}
         >
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="private equity" id="equity" />
@@ -363,7 +392,9 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
           <div key={opt} className="flex items-center space-x-2">
             <Checkbox
               checked={formData.additionalServices.includes(opt)}
-              onCheckedChange={() => toggleArrayValue("additionalServices", opt)}
+              onCheckedChange={() =>
+                toggleArrayValue("additionalServices", opt)
+              }
               disabled={isView}
             />
             <Label>{opt}</Label>
@@ -372,44 +403,69 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
       </div>
 
       {/* Select fields */}
-      {[
-        ["coach", t("coachLabel"), coachOptions],
-        ["salesman", t("salesman"), salesmanOptions],
-        ["successManager", t("successManager"), successManagerOptions],
-      ].map(([name, label, opts]) => (
-        <div key={name} className="grid gap-2">
-          <Label>{label} *</Label>
-          <select
-            name={name}
-            className="border rounded-md p-2"
-            value={formData[name]}
-            onChange={handleChange}
-            disabled={isView}
-          >
-            <option value="">{t("selectOption")}</option>
-            {opts.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-          {errors[name] && <p className="text-red-500 text-sm">{errors[name]}</p>}
-        </div>
-      ))}
+      {[["coach", t("coachLabel"), coachOptions],
+      ["salesman", t("salesman"), salesmanOptions],
+      ["successManager", t("successManager"), successManagerOptions]].map(
+        ([name, label, opts]) => (
+          <div key={name} className="grid gap-2">
+            <Label>{label} *</Label>
+            <select
+              name={name}
+              className="border rounded-md p-2"
+              value={formData[name]}
+              onChange={handleChange}
+              disabled={isView}
+            >
+              <option value="">{t("selectOption")}</option>
+              {opts.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+            {errors[name] && (
+              <p className="text-red-500 text-sm">{errors[name]}</p>
+            )}
+          </div>
+        )
+      )}
 
-      {/* Dates + Revenue */}
+      {/* Dates */}
       <div className="grid gap-2">
         <Label>{t("trainingKickoffDay")}</Label>
-        <Input type="date" name="kickoffDay" value={formData.kickoffDay} onChange={handleChange} disabled={isView} />
+        <Input
+          type="date"
+          name="kickoffDay"
+          value={formData.kickoffDay}
+          disabled={isView}
+          onChange={handleChange}
+        />
       </div>
+
       <div className="grid gap-2">
         <Label>{t("onsiteDay")}</Label>
-        <Input type="date" name="onsiteDay" value={formData.onsiteDay} onChange={handleChange} disabled={isView} />
+        <Input
+          type="date"
+          name="onsiteDay"
+          value={formData.onsiteDay}
+          disabled={isView}
+          onChange={handleChange}
+        />
       </div>
+
+      {/* Revenue */}
       <div className="grid gap-2">
         <Label>{t("revenue")} *</Label>
-        <Input type="number" name="revenue" value={formData.revenue} onChange={handleChange} disabled={isView} />
-        {errors.revenue && <p className="text-red-500 text-sm">{errors.revenue}</p>}
+        <Input
+          type="number"
+          name="revenue"
+          value={formData.revenue}
+          onChange={handleChange}
+          disabled={isView}
+        />
+        {errors.revenue && (
+          <p className="text-red-500 text-sm">{errors.revenue}</p>
+        )}
       </div>
 
       {/* Quote PDF */}
@@ -419,18 +475,18 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
           <a
             href={getFileUrl(formData.quote)}
             target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline text-sm"
+            className="text-blue-600 underline text-sm"
           >
             📄 {t("viewQuotePdf")}
           </a>
         )}
+
         {!isView && (
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, "quote")}
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary transition"
+            className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer"
           >
             <Upload className="mx-auto mb-2 h-5 w-5 opacity-60" />
             <p className="text-sm text-muted-foreground">
@@ -438,33 +494,34 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
             </p>
             <input
               type="file"
-              accept="application/pdf"
               ref={fileInputRef}
-              onChange={(e) => handleFileSelect(e, "quote")}
+              accept="application/pdf"
               className="hidden"
+              onChange={(e) => handleFileSelect(e, "quote")}
             />
           </div>
         )}
       </div>
 
-      {/* Logo */}
+      {/* Logo Upload */}
       <div className="grid gap-2">
         <Label>{t("companyLogo")}</Label>
+
         {isView && formData.logo && (
-          <a href={getFileUrl(formData.logo)} target="_blank" rel="noopener noreferrer">
+          <a href={getFileUrl(formData.logo)} target="_blank">
             <img
               src={getFileUrl(formData.logo)}
-              alt="Company logo"
-              className="h-16 object-contain mb-2 border rounded-md"
+              className="h-16 object-contain border rounded-md"
             />
           </a>
         )}
+
         {!isView && (
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, "logo")}
             onClick={() => logoInputRef.current?.click()}
-            className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary transition"
+            className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer"
           >
             <Upload className="mx-auto mb-2 h-5 w-5 opacity-60" />
             <p className="text-sm text-muted-foreground">
@@ -472,29 +529,34 @@ console.log("Submitting in mode:", currentMode, "→", method, url);
             </p>
             <input
               type="file"
-              accept="image/*"
               ref={logoInputRef}
-              onChange={(e) => handleFileSelect(e, "logo")}
+              accept="image/*"
               className="hidden"
+              onChange={(e) => handleFileSelect(e, "logo")}
             />
           </div>
         )}
       </div>
 
       {!isView && (
-        <Button type="submit" className="w-full" disabled={Object.keys(errors).length > 0}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={Object.keys(errors).length > 0}
+        >
           {mode === "add" ? t("addCompany") : t("saveChanges")}
         </Button>
       )}
     </form>
-  )
+  );
 }
 
-// =========================================================
-// CompanyDialog
-// =========================================================
+/* =========================================================
+   CompanyDialog
+========================================================= */
 export function CompanyDialog({ open, onClose, mode, company, onSubmit }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -503,12 +565,17 @@ export function CompanyDialog({ open, onClose, mode, company, onSubmit }) {
             {mode === "add"
               ? t("addNewCompany")
               : mode === "view"
-              ? `${t("viewCompany")}${company?.name ? ` – ${company.name}` : ""}`
-              : `${t("editCompany")}${company?.name ? ` – ${company.name}` : ""}`}
+              ? `${t("viewCompany")} – ${company?.name || ""}`
+              : `${t("editCompany")} – ${company?.name || ""}`}
           </DialogTitle>
         </DialogHeader>
-        <CompanyForm mode={mode} data={company} onSubmit={onSubmit} />
+
+        <CompanyForm
+          mode={mode}
+          data={company}
+          onSubmit={onSubmit}
+        />
       </DialogContent>
     </Dialog>
-  )
+  );
 }

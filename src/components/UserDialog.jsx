@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import UserConfirmDialog from "./UserConfirmDialog";
+import { apiClient } from "@/api/client";
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
@@ -18,7 +19,7 @@ function validatePassword(password) {
     return {
       ok: false,
       message:
-        "Password must be at least 8 characters long, include at least one uppercase letter and one number.",
+        "Password must be at least 8 characters long, include an uppercase letter and a number.",
     };
   }
   return { ok: true };
@@ -51,6 +52,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
   const [companies, setCompanies] = useState([]);
   const [openConfirm, setOpenConfirm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -66,10 +68,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
 
   const fetchCompanies = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/companies", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await apiClient.get("/api/companies");
       setCompanies(data);
     } catch (err) {
       console.error("Error loading companies", err);
@@ -109,92 +108,69 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
 
   const toggleCategory = (cat) => {
     setForm((prev) => {
-      const exists = prev.categories.includes(cat);
-      return {
-        ...prev,
-        categories: exists
-          ? prev.categories.filter((c) => c !== cat)
-          : [...prev.categories, cat],
-      };
+      return prev.categories.includes(cat)
+        ? { ...prev, categories: prev.categories.filter((c) => c !== cat) }
+        : { ...prev, categories: [...prev.categories, cat] };
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!user) {
-      const { ok, message } = validatePassword(form.password);
-      if (!ok) {
-        alert(message);
-        return;
-      }
-    }
-
-    if (requiresCategories && form.categories.length === 0) {
-      alert("Please select at least one category.");
-      return;
-    }
-
-    const method = user ? "PUT" : "POST";
-    const url = user
-      ? `http://localhost:5000/api/users/${user._id}`
-      : `http://localhost:5000/api/users`;
-
     const body = { ...form };
     if (!requiresCompany) delete body.companyId;
     if (!requiresCategories) delete body.categories;
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
+    if (!user) {
+      const { ok, message } = validatePassword(form.password);
+      if (!ok) return alert(message);
+    }
 
-    const data = await res.json();
-    if (res.ok) {
+    try {
+      if (user) {
+        await apiClient.put(`/api/users/${user._id}`, body); // backend expects PUT or POST -> adapt accordingly
+      } else {
+        await apiClient.post("/api/users", body);
+      }
+
       onOpenChange(false);
       onRefresh();
-    } else {
-      alert(data.message);
+    } catch (err) {
+      alert(err.message || "Error saving user");
     }
   };
+
+  const canArchive = user && currentUser?.id !== user._id;
 
   const handleArchive = () => setOpenConfirm(true);
 
   const confirmArchive = async (masterKey) => {
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/users/${user._id}/archive`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ masterKey }),
-        }
-      );
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.message || "Error archiving user");
-        return;
-      }
-
-      alert(data.message);
+      await apiClient.patch(`/users/${user._id}/archive`, { masterKey });
+      alert("User archived successfully");
       setOpenConfirm(false);
       onOpenChange(false);
       onRefresh();
     } catch (err) {
-      console.error("Error archiving user:", err);
-      alert("Unexpected error");
+      alert(err.message);
     }
   };
 
-  const canArchive = user && currentUser?.id !== user._id;
+  const handleForceReset = async () => {
+    const newPass = generateTempPassword();
+
+    try {
+      const result = await apiClient.patch(`/api/users/${user._id}/force-reset`, {
+        newPassword: newPass,
+      });
+
+      alert(
+        `Temporary password set:\n\n${newPass}\n\nUser will be forced to change it at next login.`
+      );
+    } catch (err) {
+      alert(err.message || "Error forcing password reset");
+    }
+  };
 
   return (
     <>
@@ -225,11 +201,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
             {!user && (
               <div>
                 <div className="flex gap-2 mb-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeneratePassword}
-                  >
+                  <Button type="button" variant="outline" onClick={handleGeneratePassword}>
                     Generate Random Password
                   </Button>
                 </div>
@@ -238,11 +210,10 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
                   placeholder="Password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
                   required
                 />
+
                 <label className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <input
                     type="checkbox"
@@ -253,6 +224,17 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
                   <span>Show password</span>
                 </label>
               </div>
+            )}
+
+            {user && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleForceReset}
+              >
+                Force Reset Password
+              </Button>
             )}
 
             <select
@@ -271,9 +253,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               <select
                 className="border rounded p-2 w-full"
                 value={form.companyId}
-                onChange={(e) =>
-                  setForm({ ...form, companyId: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
               >
                 <option value="">Select a company</option>
                 {companies.map((c) => (
@@ -284,12 +264,9 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </select>
             )}
 
-            {/* 🏷️ Category checkboxes for student & team-manager */}
             {requiresCategories && (
               <div className="border rounded p-2">
-                <label className="block mb-2 font-medium text-sm">
-                  Categories
-                </label>
+                <label className="block mb-2 font-medium text-sm">Categories</label>
                 <div className="grid grid-cols-2 gap-2">
                   {CATEGORY_OPTIONS.map((cat) => (
                     <label key={cat} className="flex items-center gap-2 text-sm">
@@ -308,14 +285,11 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
 
             <DialogFooter className="flex justify-between gap-2 pt-2">
               {canArchive && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleArchive}
-                >
+                <Button variant="destructive" type="button" onClick={handleArchive}>
                   {user.isArchived ? "Unarchive" : "Archive"}
                 </Button>
               )}
+
               <Button type="submit" className="w-full">
                 {user ? "Save Changes" : "Create User"}
               </Button>

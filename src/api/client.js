@@ -20,6 +20,7 @@ async function api(path, { method = "GET", body } = {}) {
 export const apiClient = {
   get: (p) => api(p),
   post: (p, b) => api(p, { method: "POST", body: b }),
+  put: (p, b) => api(p, { method: "PUT", body: b }),
   patch: (p, b) => api(p, { method: "PATCH", body: b }),
   del: (p) => api(p, { method: "DELETE" }),
 };
