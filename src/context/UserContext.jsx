@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { apiClient } from "@/api/client"   // 👈 import your API handler
 
 const UserContext = createContext()
 
@@ -7,9 +8,9 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate() // 👈 add navigation hook
+  const navigate = useNavigate()
 
-  // 🧠 Load from localStorage on startup
+  // Load from localStorage on startup
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
     const storedToken = localStorage.getItem("token")
@@ -21,24 +22,16 @@ export const UserProvider = ({ children }) => {
     setLoading(false)
   }, [])
 
-  // 🧩 Login
+  // LOGIN — now using apiClient
   const login = async (email, password) => {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    })
+    const data = await apiClient.post("/api/auth/login", { email, password })
 
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || "Login failed")
-
-    // 🧠 Save token + user to context and localStorage
     setUser(data.user)
     setToken(data.token)
+
     localStorage.setItem("user", JSON.stringify(data.user))
     localStorage.setItem("token", data.token)
 
-    // 🧭 Redirect logic
     if (data.user.mustChangePassword) {
       navigate("/settings", { replace: true })
     } else {
@@ -48,22 +41,23 @@ export const UserProvider = ({ children }) => {
     return data.user
   }
 
-  // 🚪 Logout
+  // LOGOUT
   const logout = () => {
     setUser(null)
     setToken(null)
     localStorage.removeItem("user")
     localStorage.removeItem("token")
-    navigate("/login", { replace: true }) // 👈 optional redirect
+    navigate("/login", { replace: true })
   }
 
-  const updateUser = (updatedFields) => {
-  setUser((prev) => {
-    const newUser = { ...prev, ...updatedFields }
-    localStorage.setItem("user", JSON.stringify(newUser))
-    return newUser
-  })
-}
+  // Update cached user
+  const updateUser = (fields) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...fields }
+      localStorage.setItem("user", JSON.stringify(updated))
+      return updated
+    })
+  }
 
   return (
     <UserContext.Provider value={{ user, token, login, logout, updateUser, loading }}>
