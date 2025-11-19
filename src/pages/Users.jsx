@@ -3,6 +3,7 @@ import { useUser } from "@/context/UserContext"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import UserDialog from "@/components/UserDialog"
+import { apiClient } from "@/api/client"
 
 export default function Users() {
   const { token } = useUser()
@@ -17,20 +18,19 @@ export default function Users() {
   }, [showArchived])
 
   const fetchUsers = async (archived = false) => {
-    try {
-      setLoading(true)
-      const res = await fetch(
-        `http://localhost:5000/api/users?archived=${archived}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      const data = await res.json()
-      setUsers(data)
-    } catch (err) {
-      console.error("Error fetching users:", err)
-    } finally {
-      setLoading(false)
-    }
+  try {
+    setLoading(true);
+
+    const data = await apiClient.get(`/api/users?archived=${archived}`);
+    setUsers(data);
+
+  } catch (err) {
+    console.error("Error fetching users:", err);
+  } finally {
+    setLoading(false);
   }
+};
+
 
   const handleAdd = () => {
     setSelectedUser(null)

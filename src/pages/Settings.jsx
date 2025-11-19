@@ -3,6 +3,7 @@ import { useUser  } from "@/context/UserContext"
 import { useLanguage } from "@/context/LanguageContext"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
+import { apiClient } from "@/api/client"
 
 // 🧩 Password validation helper
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/
@@ -36,52 +37,45 @@ export default function Settings() {
   }
 
   // 🧩 Handle password change
-  const handleChangePassword = async (e) => {
-    e.preventDefault()
+ const handleChangePassword = async (e) => {
+  e.preventDefault();
 
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      alert("Please fill in all fields.")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      alert("New passwords do not match.")
-      return
-    }
-
-    // 🔒 Validate strength
-    const { ok, message } = validatePassword(newPassword)
-    if (!ok) {
-      alert(message)
-      return
-    }
-
-    try {
-      setLoading(true)
-      const res = await fetch("http://localhost:5000/api/users/change-password", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ oldPassword, newPassword }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || "Error updating password")
-
-      updateUser({ mustChangePassword: false })
-
-      alert("Password updated successfully.")
-      setOldPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
-    } catch (err) {
-      console.error("Error changing password:", err)
-      alert(err.message)
-    } finally {
-      setLoading(false)
-    }
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    alert("Please fill in all fields.");
+    return;
   }
+
+  if (newPassword !== confirmPassword) {
+    alert("New passwords do not match.");
+    return;
+  }
+
+  const { ok, message } = validatePassword(newPassword);
+  if (!ok) return alert(message);
+
+  try {
+    setLoading(true);
+
+    await apiClient.patch("/api/users/change-password", {
+      oldPassword,
+      newPassword,
+    });
+
+    updateUser({ mustChangePassword: false });
+
+    alert("Password updated successfully.");
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+
+  } catch (err) {
+    console.error("Error changing password:", err);
+    alert(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="space-y-6">
