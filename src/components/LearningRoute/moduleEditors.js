@@ -1,6 +1,6 @@
 // src/components/modules/moduleEditors.js
 import VideoEditor from "./VideoEditor.jsx";
-import PDFEditor from "./PDFEditor.jsx";
+import PDFEditor from "./PdfEditor.jsx";
 import QuizEditor from "./QuizEditor.jsx";
 import CertEditor from "./CertEditor.jsx"; // future
 
