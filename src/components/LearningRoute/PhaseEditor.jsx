@@ -4,7 +4,7 @@ import { apiClient } from "@/api/client.js";
 import CourseFlowBuilder from "@/components/LearningRoute/CourseFlowBuilder";
 import QuizEditor from "@/components/LearningRoute/QuizEditor";
 import VideoEditor from "@/components/LearningRoute/VideoEditor";
-import PdfEditor from "@/components/LearningRoute/PdfEditor";
+import PdfEditor from "@/components/LearningRoute/PdfEditor_temp";
 
 export default function PhaseEditor({ open, onClose, routeId, phaseId, refresh }) {
   const { theme } = useTheme();

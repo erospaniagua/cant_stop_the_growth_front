@@ -11,7 +11,7 @@ import "reactflow/dist/style.css";
 
 // Editors
 import VideoEditor from "./VideoEditor";
-import PDFEditor from "./PdfEditor";
+import PDFEditor from "./PdfEditor_temp";
 import QuizEditor from "./QuizEditor";
 import CertEditor from "./CertEditor";
 
