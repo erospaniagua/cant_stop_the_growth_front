@@ -49,6 +49,7 @@ const CATEGORY_OPTIONS = [
 
 export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
   const { token, user: currentUser } = useUser();
+
   const [companies, setCompanies] = useState([]);
   const [openConfirm, setOpenConfirm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -58,6 +59,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
     email: "",
     password: "",
     role: "coach",
+    subRole: "",
     companyId: "",
     categories: [],
   });
@@ -82,6 +84,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         email: user.email,
         password: "",
         role: user.role,
+        subRole: user.subRole || "",
         companyId: user.companyId?._id || "",
         categories: user.categories || [],
       });
@@ -91,6 +94,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         email: "",
         password: "",
         role: "coach",
+        subRole: "",
         companyId: "",
         categories: [],
       });
@@ -118,8 +122,14 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
     e.preventDefault();
 
     const body = { ...form };
+
+    // Cleanup depending on role
     if (!requiresCompany) delete body.companyId;
     if (!requiresCategories) delete body.categories;
+
+    if (!["admin", "coach"].includes(form.role)) {
+      delete body.subRole;
+    }
 
     if (!user) {
       const { ok, message } = validatePassword(form.password);
@@ -128,7 +138,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
 
     try {
       if (user) {
-        await apiClient.put(`/api/users/${user._id}`, body); // backend expects PUT or POST -> adapt accordingly
+        await apiClient.put(`/api/users/${user._id}`, body);
       } else {
         await apiClient.post("/api/users", body);
       }
@@ -160,7 +170,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
     const newPass = generateTempPassword();
 
     try {
-      const result = await apiClient.patch(`/api/users/${user._id}/force-reset`, {
+      await apiClient.patch(`/api/users/${user._id}/force-reset`, {
         newPassword: newPass,
       });
 
@@ -181,6 +191,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {/* NAME */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Name"
@@ -189,6 +200,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               required
             />
 
+            {/* EMAIL */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Email"
@@ -198,19 +210,27 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               required
             />
 
+            {/* NEW USER PASSWORD */}
             {!user && (
               <div>
                 <div className="flex gap-2 mb-2">
-                  <Button type="button" variant="outline" onClick={handleGeneratePassword}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeneratePassword}
+                  >
                     Generate Random Password
                   </Button>
                 </div>
+
                 <input
                   className="border rounded p-2 w-full"
                   placeholder="Password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
                   required
                 />
 
@@ -226,6 +246,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </div>
             )}
 
+            {/* FORCE RESET */}
             {user && (
               <Button
                 type="button"
@@ -237,6 +258,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </Button>
             )}
 
+            {/* ROLE */}
             <select
               className="border rounded p-2 w-full"
               value={form.role}
@@ -249,11 +271,30 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               <option value="team-manager">Team Manager</option>
             </select>
 
+            {/* SUB-ROLE — only admin/coach */}
+            {["admin", "coach"].includes(form.role) && (
+              <select
+                className="border rounded p-2 w-full"
+                value={form.subRole}
+                onChange={(e) =>
+                  setForm({ ...form, subRole: e.target.value })
+                }
+              >
+                <option value="">No sub-role</option>
+                <option value="salesman">Salesman</option>
+                <option value="coach">Coach (Internal)</option>
+                <option value="successManager">Success Manager</option>
+              </select>
+            )}
+
+            {/* COMPANY */}
             {requiresCompany && (
               <select
                 className="border rounded p-2 w-full"
                 value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, companyId: e.target.value })
+                }
               >
                 <option value="">Select a company</option>
                 {companies.map((c) => (
@@ -264,12 +305,18 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </select>
             )}
 
+            {/* CATEGORIES */}
             {requiresCategories && (
               <div className="border rounded p-2">
-                <label className="block mb-2 font-medium text-sm">Categories</label>
+                <label className="block mb-2 font-medium text-sm">
+                  Categories
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   {CATEGORY_OPTIONS.map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 text-sm">
+                    <label
+                      key={cat}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={form.categories.includes(cat)}
@@ -283,9 +330,14 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </div>
             )}
 
+            {/* FOOTER */}
             <DialogFooter className="flex justify-between gap-2 pt-2">
               {canArchive && (
-                <Button variant="destructive" type="button" onClick={handleArchive}>
+                <Button
+                  variant="destructive"
+                  type="button"
+                  onClick={handleArchive}
+                >
                   {user.isArchived ? "Unarchive" : "Archive"}
                 </Button>
               )}

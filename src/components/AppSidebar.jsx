@@ -14,6 +14,7 @@ import { useUser } from "@/context/UserContext"
 import { NavLink, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { LogOut } from "lucide-react"
+import { UserBadge } from "@/components/UserBadge"
 
 export function AppSidebar() {
   const { user, loading, logout } = useUser()
@@ -77,6 +78,7 @@ export function AppSidebar() {
       {/* 🧠 Footer section: Mode toggle + Log out */}
       <div className="p-4 border-t flex flex-col gap-2">
         <ModeToggle />
+        <UserBadge />
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted px-2 py-1.5 rounded-md transition"

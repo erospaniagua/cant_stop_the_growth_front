@@ -1,7 +1,19 @@
 // src/config/permissions.js
+
 export const permissions = {
   admin: {
-    routes: ["/", "/companies", "/coaches", "/learning-routes", "/students", "/analytics", "/settings","/admin/users"],
+    routes: [
+      "/",
+      "/companies",
+      "/coaches",
+      "/learning-routes",
+      "/teams",
+      "/analytics",
+      "/settings",
+      "/admin/users",
+      "/event-planning",
+      "/my-calendar" // NEW: Admin master calendar
+    ],
     can: {
       addCompany: true,
       addCourse: true,
@@ -10,8 +22,15 @@ export const permissions = {
       changeLanguage: true,
     },
   },
+
   coach: {
-    routes: ["/", "/students", "/courses", "/settings"],
+    routes: [
+      "/",
+      "/students",
+      "/courses",
+      "/settings",
+      "/my-calendar"  // NEW: Coach calendar
+    ],
     can: {
       addCompany: false,
       addCourse: true,
@@ -20,25 +39,48 @@ export const permissions = {
       changeLanguage: true,
     },
   },
+
   student: {
-  routes: ["/", "/my-learning-routes", "/my-learning-routes/:routeId", "/settings","/my-learning-routes/:routeId/lessons/:lessonId"],
-  can: {
-    addCompany: false,
-    addCourse: false,
-    addStudent: false,
-    editCourse: false,
-    changeLanguage: true,
+    routes: [
+      "/",
+      "/my-learning-routes",
+      "/my-learning-routes/:routeId",
+      "/my-learning-routes/:routeId/lessons/:lessonId",
+      "/my-calendar", // NEW: Student calendar
+      "/settings"
+    ],
+    can: {
+      addCompany: false,
+      addCourse: false,
+      addStudent: false,
+      editCourse: false,
+      changeLanguage: true,
+    },
   },
-},
 
   company: {
-    routes: ["/", "/courses", "/settings"],
+    routes: [
+      "/",
+      "/courses",
+      "/company-calendar", // NEW: Company-wide calendar
+      "/settings",
+      "/my-calendar"
+    ],
     can: {
       viewCourses: true,
       editCourse: false,
       changeLanguage: true,
     },
-    
   },
-  "team-manager": { routes: ["/managers", "/settings"] }
-}
+
+  "team-manager": {
+    routes: [
+      "/managers",
+      "/team-calendar", // NEW: Team calendar
+      "/settings"
+    ],
+    can: {
+      changeLanguage: true,
+    }
+  }
+};
