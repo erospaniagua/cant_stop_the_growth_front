@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/api/client.js";
 import PhaseEditor from "@/components/LearningRoute/PhaseEditor";
+import {useAdminConfirm} from "@/context/AdminConfirmContext";
 
 const CATEGORY_OPTIONS = [
   "Leadership",
@@ -21,6 +22,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
   const [publishing, setPublishing] = useState(false);
   const [showPhaseEditor, setShowPhaseEditor] = useState(null);
   const hasBootstrapped = useRef(false);
+  const confirmAdmin = useAdminConfirm();
 
   /* ===========================================================
      Load existing route OR create a new one
@@ -113,23 +115,33 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
      Publish the route
   =========================================================== */
   const handlePublish = async () => {
-    if (!route?._id) return;
-    setPublishing(true);
-    try {
-      const res = await apiClient.patch(
-        `/api/learning-routes/${route._id}/publish`
-      );
-      setRoute(res.route || res);
-      alert("✅ Learning Route published!");
-      refresh?.();
-      handleClose();
-    } catch (err) {
-      console.error("Error publishing route:", err);
-      alert(err?.message || "❌ Failed to publish route");
-    } finally {
-      setPublishing(false);
-    }
-  };
+  if (!route?._id) return;
+
+  // Ask for master key
+  const masterKey = await confirmAdmin();
+  if (!masterKey) return; // user clicked cancel
+
+  setPublishing(true);
+
+  try {
+    const res = await apiClient.patch(
+      `/api/learning-routes/${route._id}/publish`,
+      { masterKey }
+    );
+
+    setRoute(res.route || res);
+    alert("✅ Learning Route published!");
+    refresh?.();
+    handleClose();
+  } catch (err) {
+    console.error("Error publishing route:", err);
+    alert(err?.response?.data?.message || "❌ Failed to publish route");
+  } finally {
+    setPublishing(false);
+  }
+};
+
+
 
   const handleClose = () => {
     hasBootstrapped.current = false;

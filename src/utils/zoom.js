@@ -1,25 +1,37 @@
-export function parseZoomLink(url) {
+// utils/zoom.js
+
+// Extract meetingId + pwd from ANY Zoom URL
+export function parseZoomLink(raw) {
   try {
-    const u = new URL(url);
+    const url = new URL(raw);
 
-    // Extract meeting ID from last part of path
-    const pathParts = u.pathname.split("/");
-    const meetingId = pathParts[pathParts.length - 1];
+    // Extract ID from /j/xxxx or /w/xxxx or /s/xxxx
+    const parts = url.pathname.split("/");
+    const joinIndex = parts.findIndex(p => ["j", "w", "s"].includes(p));
 
-    // Extract password
-    const pwd = u.searchParams.get("pwd") || "";
+    if (joinIndex === -1 || !parts[joinIndex + 1]) {
+      return null;
+    }
+
+    const meetingId = parts[joinIndex + 1];
+    const pwd = url.searchParams.get("pwd") || null;
 
     return { meetingId, pwd };
-  } catch (err) {
-    console.error("Invalid Zoom URL:", url);
-    return { meetingId: null, pwd: null };
+  } catch {
+    return null;
   }
 }
 
-export function buildBrowserJoinUrl(meetingId, pwd, userName) {
-  if (!meetingId) return null;
-  const encodedName = encodeURIComponent(userName || "Guest");
-  const encodedPwd = pwd ? `&pwd=${pwd}` : "";
 
-  return `https://zoom.us/wc/${meetingId}/join?uname=${encodedName}${encodedPwd}`;
+// Build Zoom’s browser join URL (this NEVER includes raw URLs)
+export function buildBrowserJoinUrl(meetingId, pwd, username = "Guest") {
+  const encodedName = encodeURIComponent(username);
+
+  let url = `https://zoom.us/wc/${meetingId}/join?uname=${encodedName}`;
+
+  if (pwd) {
+    url += `&pwd=${encodeURIComponent(pwd)}`;
+  }
+
+  return url;
 }

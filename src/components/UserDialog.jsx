@@ -8,8 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
-import UserConfirmDialog from "./UserConfirmDialog";
 import { apiClient } from "@/api/client";
+import { useAdminConfirm } from "@/context/AdminConfirmContext";
+
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
@@ -48,6 +49,8 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
+  const confirmAdmin = useAdminConfirm();
+
   const { token, user: currentUser } = useUser();
 
   const [companies, setCompanies] = useState([]);
@@ -119,68 +122,79 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const body = { ...form };
+  const body = { ...form };
 
-    // Cleanup depending on role
-    if (!requiresCompany) delete body.companyId;
-    if (!requiresCategories) delete body.categories;
+  // roles cleanup
+  if (!requiresCompany) delete body.companyId;
+  if (!requiresCategories) delete body.categories;
+  if (!["admin", "coach"].includes(form.role)) delete body.subRole;
 
-    if (!["admin", "coach"].includes(form.role)) {
-      delete body.subRole;
+  // ask for admin key
+  const adminKey = await confirmAdmin();
+  if (!adminKey) return;
+  body.masterKey = adminKey;
+
+  // password validation only for creation
+  if (!user) {
+    const validation = validatePassword(form.password);
+    if (!validation.ok) return alert(validation.message);
+  }
+
+  try {
+    if (user) {
+      await apiClient.put(`/api/users/${user._id}`, body);
+    } else {
+      await apiClient.post("/api/users", body);
     }
 
-    if (!user) {
-      const { ok, message } = validatePassword(form.password);
-      if (!ok) return alert(message);
-    }
+    onOpenChange(false);
+    onRefresh();
+  } catch (err) {
+    alert(err.message || "Error saving user");
+  }
+};
 
-    try {
-      if (user) {
-        await apiClient.put(`/api/users/${user._id}`, body);
-      } else {
-        await apiClient.post("/api/users", body);
-      }
-
-      onOpenChange(false);
-      onRefresh();
-    } catch (err) {
-      alert(err.message || "Error saving user");
-    }
-  };
 
   const canArchive = user && currentUser?.id !== user._id;
 
   const handleArchive = () => setOpenConfirm(true);
 
-  const confirmArchive = async (masterKey) => {
-    try {
-      await apiClient.patch(`/users/${user._id}/archive`, { masterKey });
-      alert("User archived successfully");
-      setOpenConfirm(false);
-      onOpenChange(false);
-      onRefresh();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
+  const confirmArchive = async () => {
+  const adminKey = await confirmAdmin();
+  if (!adminKey) return;
+
+  try {
+    await apiClient.patch(`/api/users/${user._id}/archive`, { masterKey: adminKey });
+    alert("User archive status updated.");
+    onOpenChange(false);
+    onRefresh();
+  } catch (err) {
+    alert(err.message || "Error archiving user");
+  }
+};
+
+
 
   const handleForceReset = async () => {
-    const newPass = generateTempPassword();
+  const newPass = generateTempPassword();
 
-    try {
-      await apiClient.patch(`/api/users/${user._id}/force-reset`, {
-        newPassword: newPass,
-      });
+  const adminKey = await confirmAdmin();
+  if (!adminKey) return;
 
-      alert(
-        `Temporary password set:\n\n${newPass}\n\nUser will be forced to change it at next login.`
-      );
-    } catch (err) {
-      alert(err.message || "Error forcing password reset");
-    }
-  };
+  try {
+    await apiClient.patch(`/api/users/${user._id}/force-reset`, {
+      newPassword: newPass,
+      masterKey: adminKey,
+    });
+
+    alert(`Temporary password set:\n\n${newPass}`);
+  } catch (err) {
+    alert(err.message || "Error forcing reset");
+  }
+};
+
 
   return (
     <>
@@ -336,7 +350,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
                 <Button
                   variant="destructive"
                   type="button"
-                  onClick={handleArchive}
+                  onClick={confirmArchive}
                 >
                   {user.isArchived ? "Unarchive" : "Archive"}
                 </Button>
@@ -349,12 +363,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
           </form>
         </DialogContent>
       </Dialog>
-
-      <UserConfirmDialog
-        open={openConfirm}
-        onOpenChange={setOpenConfirm}
-        onConfirm={confirmArchive}
-      />
     </>
   );
 }

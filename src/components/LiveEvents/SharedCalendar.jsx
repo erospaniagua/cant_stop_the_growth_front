@@ -89,6 +89,9 @@ export default function SharedCalendar({ fetchMode, companyId, managerId }) {
         datesSet={handleDatesSet}
         eventClick={handleEventClick}
         height="80vh"
+        timeZone="local"
+       eventDisplay="block"
+       dayMaxEventRows={3}
       />
 
       {selectedEventId && (

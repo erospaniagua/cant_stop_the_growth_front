@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/api/client";
@@ -7,8 +7,7 @@ export default function TeamForm({ open, onClose, team, onSaved }) {
   const isEditing = !!team;
 
   const [companies, setCompanies] = useState([]);
-  const [managers, setManagers] = useState([]);
-  const [members, setMembers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -17,22 +16,26 @@ export default function TeamForm({ open, onClose, team, onSaved }) {
     members: []
   });
 
+  // Filters
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [onlyFreeUsers, setOnlyFreeUsers] = useState(false);
+
   async function loadCompanies() {
     const data = await apiClient.get("/api/companies");
     setCompanies(data);
   }
 
   async function loadUsers() {
-    const users = await apiClient.get("/api/users");
-    const managers = users.filter((u) => u.role === "team-manager");
-    const students = users.filter((u) => u.role === "student");
+  const users = await apiClient.get("/api/users");
+  console.log("BACKEND USERS:", users);
+  setAllUsers(users);
+}
 
-    setManagers(managers);
-    setMembers(students);
-  }
 
   useEffect(() => {
     if (!open) return;
+
     loadCompanies();
     loadUsers();
 
@@ -53,12 +56,55 @@ export default function TeamForm({ open, onClose, team, onSaved }) {
     }
   }, [open]);
 
+  // Filter by company
+ const companyUsers = useMemo(() => {
+  if (!form.companyId) return [];
+
+  return allUsers.filter(u => {
+    if (!u.companyId) return false;
+
+    // If backend returned a populated company (object)
+    const id =
+      typeof u.companyId === "object" && u.companyId._id
+        ? u.companyId._id
+        : u.companyId;
+
+    return String(id) === String(form.companyId);
+  });
+}, [allUsers, form.companyId]);
+
+
+  const managers = useMemo(() => {
+    return companyUsers.filter(u => u.role === "team-manager");
+  }, [companyUsers]);
+
+  const students = useMemo(() => {
+    let filtered = companyUsers.filter(u => u.role === "student");
+
+    if (categoryFilter) {
+      filtered = filtered.filter(u => u.categories?.includes(categoryFilter));
+    }
+
+    if (onlyFreeUsers) {
+      filtered = filtered.filter(u => !u.teamId && !u.managerId);
+    }
+
+    if (search.trim()) {
+      filtered = filtered.filter(u =>
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [companyUsers, categoryFilter, onlyFreeUsers, search]);
+
   const toggleMember = (id) => {
-    setForm((prev) => {
-      return prev.members.includes(id)
-        ? { ...prev, members: prev.members.filter((m) => m !== id) }
-        : { ...prev, members: [...prev.members, id] };
-    });
+    setForm(prev => 
+      prev.members.includes(id)
+        ? { ...prev, members: prev.members.filter(m => m !== id) }
+        : { ...prev, members: [...prev.members, id] }
+    );
   };
 
   const handleSubmit = async () => {
@@ -77,6 +123,7 @@ export default function TeamForm({ open, onClose, team, onSaved }) {
       alert("Error saving team");
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -121,32 +168,56 @@ export default function TeamForm({ open, onClose, team, onSaved }) {
             ))}
           </select>
 
+          {/* FILTERS */}
+          <div className="flex gap-2 items-center">
+            <input
+              className="border p-2 flex-1 rounded"
+              placeholder="Search name/email"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <select
+              className="border p-2 rounded"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="">All Categories</option>
+              <option value="Sales">Sales</option>
+              <option value="Install">Install</option>
+              <option value="Service">Service</option>
+            </select>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={onlyFreeUsers}
+                onChange={() => setOnlyFreeUsers(v => !v)}
+              />
+              Without manager
+            </label>
+          </div>
+
           {/* MEMBERS */}
           <div>
             <label className="font-medium text-sm">Team Members</label>
             <div className="max-h-56 overflow-y-auto border rounded p-2">
-              {members.map((m) => (
+              {students.map((m) => (
                 <label key={m._id} className="flex items-center gap-2 p-1">
                   <input
                     type="checkbox"
                     checked={form.members.includes(m._id)}
                     onChange={() => toggleMember(m._id)}
                   />
-                  <span>
-                    {m.name} ({m.email})
-                  </span>
+                  <span>{m.name} ({m.email})</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              {isEditing ? "Save Changes" : "Create Team"}
-            </Button>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={handleSubmit}>{isEditing ? "Save Changes" : "Create Team"}</Button>
           </div>
         </div>
       </DialogContent>

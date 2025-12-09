@@ -24,22 +24,34 @@ export default function TemplateInstanceDetail({ instanceId, onBack }) {
     }
   }
 
-  async function updateSessionDate(sessionId, newDate) {
-    try {
-      setSavingSession(sessionId);
+  // helper
+function isoToLocalInputValue(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+}
 
-      await apiClient.patch(
-        `/api/template-instances/${instanceId}/sessions/${sessionId}`,
-        { assignedDate: newDate }
-      );
+async function updateSessionDate(sessionId, newLocalValue) {
+  try {
+    setSavingSession(sessionId);
 
-      await loadInstance();
-    } catch (err) {
-      alert(err.message || "Error updating date");
-    } finally {
-      setSavingSession(null);
-    }
+    const iso = newLocalValue ? new Date(newLocalValue).toISOString() : null;
+
+    await apiClient.patch(
+      `/api/template-instances/${instanceId}/sessions/${sessionId}`,
+      { assignedDate: iso }
+    );
+
+    await loadInstance();
+  } catch (err) {
+    alert(err.message || "Error updating date");
+  } finally {
+    setSavingSession(null);
   }
+}
+
 
   if (loading) return <div>Loading instance…</div>;
   if (error) return <div className="text-red-500">{error}</div>;
@@ -114,7 +126,7 @@ export default function TemplateInstanceDetail({ instanceId, onBack }) {
             <input
               type="datetime-local"
               className="w-full p-2 border rounded"
-              value={s.assignedDate ? s.assignedDate.slice(0, 16) : ""}
+              value={isoToLocalInputValue(s.assignedDate)}
               onChange={(e) =>
                 updateSessionDate(s._id, e.target.value)
               }

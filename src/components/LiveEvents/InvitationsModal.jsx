@@ -34,7 +34,9 @@ export default function InvitationsModal({
 
   const [manualEmail, setManualEmail] = useState("");
 
-  const ROLES = ["student", "teacher", "coach", "admin", "company"];
+  // FIXED ROLES
+  const ROLES = ["student", "coach", "team-manager", "admin"];
+
   const CATEGORIES = ["Leadership", "Sales", "Service", "Office Staff", "Install"];
 
   /* ================================================================
@@ -101,15 +103,12 @@ export default function InvitationsModal({
     const exists = invites.some(inv => inviteKey(inv) === key);
 
     if (exists) {
-      // REMOVE
       setInvites(prev => prev.filter(inv => inviteKey(inv) !== key));
-
       if (mode === "existing-instance") {
         setPendingRemoves(prev => [...prev, key]);
         setPendingAdds(prev => prev.filter(k => k !== key));
       }
     } else {
-      // ADD
       const newInvite = user._id
         ? { _id: "local", userId: { ...user } }
         : { _id: "local", email: key };
@@ -124,7 +123,7 @@ export default function InvitationsModal({
   }
 
   /* ================================================================
-     ADD MANUAL EMAIL
+     MANUAL EMAIL
   ================================================================ */
   function addManualEmail() {
     const email = manualEmail.trim();
@@ -143,7 +142,7 @@ export default function InvitationsModal({
   }
 
   /* ================================================================
-     COMMIT CHANGES (existing-instance)
+     COMMIT CHANGES
   ================================================================ */
   async function commitChanges() {
     try {
@@ -163,7 +162,7 @@ export default function InvitationsModal({
   }
 
   /* ================================================================
-     CONFIRM (new-instance)
+     CONFIRM NEW INSTANCE
   ================================================================ */
   function confirmForNewInstance() {
     const cleaned = invites.map(inv => inviteKey(inv));
@@ -171,7 +170,7 @@ export default function InvitationsModal({
   }
 
   /* ================================================================
-     CATEGORY SELECT UI (custom multi-select)
+     CATEGORY SELECT
   ================================================================ */
   function toggleCategory(cat) {
     if (selectedCats.includes(cat)) {
@@ -184,12 +183,11 @@ export default function InvitationsModal({
   /* ================================================================
      RENDER
   ================================================================ */
+
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded shadow text-center">
-          Loading…
-        </div>
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
+        <div className="bg-white p-6 rounded shadow text-center">Loading…</div>
       </div>
     );
   }
@@ -199,38 +197,26 @@ export default function InvitationsModal({
       <div className="bg-white rounded-lg p-6 w-full max-w-5xl h-[90vh] overflow-y-auto space-y-6">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-semibold">
             {mode === "new-instance" ? "Select Invitations" : "Manage Invitations"}
           </h2>
           <button onClick={onClose} className="text-gray-600 hover:text-black">✕</button>
         </div>
 
-        {/* PENDING CHANGES */}
-        {mode === "existing-instance" && (pendingAdds.length || pendingRemoves.length) > 0 && (
-          <div className="bg-yellow-100 border border-yellow-300 p-3 rounded">
-            Pending changes: +{pendingAdds.length} / –{pendingRemoves.length}
-            <button
-              onClick={commitChanges}
-              className="mt-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            >
-              Commit Changes
-            </button>
-          </div>
-        )}
+        {/* FILTER + ACTION BAR */}
+        <div className="flex flex-wrap items-end gap-3 pb-4 border-b">
 
-        {/* FILTERS */}
-        <div className="grid grid-cols-4 gap-4">
           <input
             type="text"
             placeholder="Search name or email"
-            className="p-2 border rounded"
+            className="p-2 border rounded w-56"
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
 
           <select
-            className="p-2 border rounded"
+            className="p-2 border rounded w-40"
             value={selectedCompany}
             onChange={e => setSelectedCompany(e.target.value)}
           >
@@ -241,7 +227,7 @@ export default function InvitationsModal({
           </select>
 
           <select
-            className="p-2 border rounded"
+            className="p-2 border rounded w-40"
             value={selectedRole}
             onChange={e => setSelectedRole(e.target.value)}
           >
@@ -249,30 +235,48 @@ export default function InvitationsModal({
             {ROLES.map(r => <option key={r}>{r}</option>)}
           </select>
 
-          {/* CATEGORY MULTI-SELECT (custom pill UI) */}
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map(cat => (
-              <div
+              <button
                 key={cat}
-                className={`cursor-pointer px-2 py-1 rounded border ${
+                type="button"
+                onClick={() => toggleCategory(cat)}
+                className={`px-2 py-1 border rounded text-sm ${
                   selectedCats.includes(cat)
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-gray-100 hover:bg-gray-200"
                 }`}
-                onClick={() => toggleCategory(cat)}
               >
                 {cat}
-              </div>
+              </button>
             ))}
           </div>
-        </div>
 
-        <button
-          onClick={searchUsers}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Search
-        </button>
+          <button
+            onClick={searchUsers}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Search
+          </button>
+
+          {mode === "existing-instance" ? (
+            <button
+              onClick={commitChanges}
+              disabled={pendingAdds.length === 0 && pendingRemoves.length === 0}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              Apply Changes
+            </button>
+          ) : (
+            <button
+              onClick={confirmForNewInstance}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Confirm
+            </button>
+          )}
+
+        </div>
 
         {/* MANUAL EMAIL */}
         <div className="flex space-x-2 items-center">
@@ -361,27 +365,6 @@ export default function InvitationsModal({
               ))
             )}
           </div>
-        </div>
-
-        {/* FOOTER */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
-
-          {mode === "new-instance" ? (
-            <button
-              onClick={confirmForNewInstance}
-              className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
-            >
-              Confirm & Create Tour
-            </button>
-          ) : (
-            <button
-              onClick={commitChanges}
-              disabled={pendingAdds.length === 0 && pendingRemoves.length === 0}
-              className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50"
-            >
-              Apply Changes
-            </button>
-          )}
 
         </div>
 

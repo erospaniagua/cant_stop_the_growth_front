@@ -92,6 +92,8 @@
   }
 }
 
+
+
 @layer base {
   * {
     @apply border-border;
@@ -99,4 +101,22 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+/* Fix FullCalendar event overflow */
+.fc-daygrid-event {
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Prevent multi-day stretch behavior */
+.fc-event {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+}
+
+.fc-daygrid-event-harness {
+  max-width: 100% !important;
 }

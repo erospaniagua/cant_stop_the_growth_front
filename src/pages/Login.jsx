@@ -20,7 +20,7 @@ export default function Login() {
         {
           admin: "/",
           coach: "/coaches",
-          student: "/students",
+          student: "/",
           company: "/companies",
           "team-manager": "/managers",
         }[user.role] || "/"
