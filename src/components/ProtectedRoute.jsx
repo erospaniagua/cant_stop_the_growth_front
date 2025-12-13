@@ -3,6 +3,17 @@ import { useUser } from "@/context/UserContext";
 import { permissions } from "@/config/permissions";
 import { jwtDecode } from "jwt-decode";
 
+function pathMatches(allowedPath, currentPath) {
+  const regex = new RegExp(
+    "^" +
+      allowedPath
+        .replace(/:[^/]+/g, "[^/]+")
+        .replace(/\//g, "\\/") +
+      "$"
+  );
+  return regex.test(currentPath);
+}
+
 export default function ProtectedRoute({ children, path }) {
   const { user, token, logout, loading } = useUser();
   const location = useLocation();
@@ -31,10 +42,12 @@ export default function ProtectedRoute({ children, path }) {
 
   const allowedRoutes = permissions[user.role]?.routes || [];
 
-  const normalizedPath = path.split("/:")[0];
-  const isAllowed = allowedRoutes.some((allowed) =>
-    normalizedPath.startsWith(allowed)
-  );
+  const currentPath = location.pathname;
+
+const isAllowed = allowedRoutes.some((allowed) =>
+  pathMatches(allowed, currentPath)
+);
+
 
   if (!isAllowed) {
     return <Navigate to="/" replace />;

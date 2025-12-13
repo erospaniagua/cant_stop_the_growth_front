@@ -186,6 +186,8 @@ export default function TeamForm({ open, onClose, team, onSaved }) {
               <option value="Sales">Sales</option>
               <option value="Install">Install</option>
               <option value="Service">Service</option>
+              <option value="Leadership">Leadership</option>
+              <option value="Office Staff">Office Staff</option>
             </select>
 
             <label className="flex items-center gap-2 text-sm">
