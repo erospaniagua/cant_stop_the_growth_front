@@ -6,7 +6,7 @@ export const permissions = {
       "/",
       "/companies",
       "/coaches",
-      "/learning-routes",
+      "/learning-tracks",
       "/teams",
       "/analytics",
       "/settings",
@@ -43,9 +43,9 @@ export const permissions = {
   student: {
     routes: [
       "/",
-      "/my-learning-routes",
-      "/my-learning-routes/:routeId",
-      "/my-learning-routes/:routeId/lessons/:lessonId",
+      "/my-learning-tracks",
+      "/my-learning-tracks/:routeId",
+      "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/my-calendar", // NEW: Student calendar
       "/settings"
     ],

@@ -16,7 +16,7 @@ export default function LearningRouteList() {
   const fetchRoutes = async () => {
     setLoading(true);
     try {
-      const data = await apiClient.get("/api/learning-routes");
+      const data = await apiClient.get("/api/learning-tracks");
       setRoutes(data);
     } catch (err) {
       console.error("Error loading learning routes:", err);
@@ -55,7 +55,7 @@ export default function LearningRouteList() {
           <span role="img" aria-label="book">
             📚
           </span>{" "}
-          Learning Routes
+          Learning Tracks
         </h1>
         <button
           onClick={handleCreate}
@@ -66,7 +66,7 @@ export default function LearningRouteList() {
             transition
           "
         >
-          + New Learning Route
+          + New Learning Track
         </button>
       </div>
 
@@ -75,7 +75,7 @@ export default function LearningRouteList() {
         <p className="text-neutral-600 dark:text-neutral-400">Loading...</p>
       ) : routes.length === 0 ? (
         <p className="text-neutral-500 dark:text-neutral-400 italic">
-          No learning routes yet — click “+ New Learning Route”.
+          No learning Tracks yet — click “+ New Learning Track”.
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

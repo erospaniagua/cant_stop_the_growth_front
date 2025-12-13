@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import LearningRoutesPage from "@/pages/LearningRoutes";
@@ -16,7 +16,6 @@ import MyLearningRoutePreview from "./components/routes/MyLearningRoutePreview";
 import MyLearningLessonPlayer from "./components/routes/MyLearningLessonPlayer.jsx";
 import EventPlanning from "@/pages/EventPlanning";
 
-// NEW calendar pages
 import MyCalendar from "@/pages/MyCalendar";
 import CompanyCalendar from "@/pages/CompanyCalendar";
 import TeamCalendar from "@/pages/TeamCalendar";
@@ -24,141 +23,173 @@ import TeamCalendar from "@/pages/TeamCalendar";
 function App() {
   return (
     <Routes>
-      {/* 🚪 Public routes (no sidebar, no layout) */}
+      {/* PUBLIC */}
       <Route path="/login" element={<Login />} />
 
-      {/* 🧱 Protected routes — sidebar applies only here */}
+      {/* PROTECTED WRAPPER WITH SIDEBAR */}
       <Route
         element={
-          <SidebarProvider>
-            <Layout />
-          </SidebarProvider>
+             <Layout />
         }
       >
-        {/* Admin / default dashboard */}
+        {/* DASHBOARD */}
         <Route
           path="/"
-          element={<ProtectedRoute path="/" element={<Dashboard />} />}
+          element={
+            <ProtectedRoute path="/">
+              <Dashboard />
+            </ProtectedRoute>
+          }
         />
 
+        {/* USERS */}
         <Route
           path="/admin/users"
-          element={<ProtectedRoute path="/admin/users" element={<Users />} />}
+          element={
+            <ProtectedRoute path="/admin/users">
+              <Users />
+            </ProtectedRoute>
+          }
         />
 
+        {/* COMPANIES */}
         <Route
           path="/companies"
-          element={<ProtectedRoute path="/companies" element={<Companies />} />}
+          element={
+            <ProtectedRoute path="/companies">
+              <Companies />
+            </ProtectedRoute>
+          }
         />
 
+        {/* COACHES */}
         <Route
           path="/coaches"
-          element={<ProtectedRoute path="/coaches" element={<Coaches />} />}
-        />
-
-        <Route
-          path="/learning-routes"
           element={
-            <ProtectedRoute
-              path="/learning-routes"
-              element={<LearningRoutesPage />}
-            />
+            <ProtectedRoute path="/coaches">
+              <Coaches />
+            </ProtectedRoute>
           }
         />
 
+        {/* LEARNING ROUTES EDITOR */}
+        <Route
+          path="/learning-tracks"
+          element={
+            <ProtectedRoute path="/learning-tracks">
+              <LearningRoutesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* TEAMS */}
         <Route
           path="/teams"
-          element={<ProtectedRoute path="/teams" element={<Teams />} />}
+          element={
+            <ProtectedRoute path="/teams">
+              <Teams />
+            </ProtectedRoute>
+          }
         />
 
+        {/* ANALYTICS */}
         <Route
           path="/analytics"
-          element={<ProtectedRoute path="/analytics" element={<Analytics />} />}
+          element={
+            <ProtectedRoute path="/analytics">
+              <Analytics />
+            </ProtectedRoute>
+          }
         />
 
+        {/* SETTINGS */}
         <Route
           path="/settings"
-          element={<ProtectedRoute path="/settings" element={<Settings />} />}
+          element={
+            <ProtectedRoute path="/settings">
+              <Settings />
+            </ProtectedRoute>
+          }
         />
 
-        {/* Team manager dashboard */}
+        {/* TEAM MANAGER */}
         <Route
           path="/managers"
-          element={<ProtectedRoute path="/managers" element={<Dashboard />} />}
-        />
-
-        {/* Student learning routes */}
-        <Route
-          path="/my-learning-routes"
           element={
-            <ProtectedRoute
-              path="/my-learning-routes"
-              element={<MyLearningRoutesPage />}
-            />
+            <ProtectedRoute path="/managers">
+              <Dashboard />
+            </ProtectedRoute>
           }
         />
 
+        {/* STUDENT LEARNING ROUTES */}
         <Route
-          path="/my-learning-routes/:routeId"
+          path="/my-learning-tracks"
           element={
-            <ProtectedRoute
-              path="/my-learning-routes/:routeId"
-              element={<MyLearningRoutePreview />}
-            />
+            <ProtectedRoute path="/my-learning-tracks">
+              <MyLearningRoutesPage />
+            </ProtectedRoute>
           }
         />
 
+        {/* ROUTE PREVIEW */}
         <Route
-          path="/my-learning-routes/:routeId/lessons/:lessonId"
+          path="/my-learning-tracks/:routeId"
           element={
-            <ProtectedRoute
-              path="/my-learning-routes/:routeId/lessons/:lessonId"
-              element={<MyLearningLessonPlayer />}
-            />
+            <ProtectedRoute path="/my-learning-tracks">
+              <MyLearningRoutePreview />
+            </ProtectedRoute>
           }
         />
 
-        {/* Event planning (admin view) */}
+        {/* LESSON PLAYER (CERTIFICATE FLOWS HERE) */}
+        <Route
+  path="/my-learning-tracks/:routeId/lessons/:lessonId"
+  element={
+    <ProtectedRoute path="/my-learning-tracks">
+      <MyLearningLessonPlayer />
+    </ProtectedRoute>
+  }
+/>
+
+
+        {/* EVENT PLANNING */}
         <Route
           path="/event-planning"
           element={
-            <ProtectedRoute
-              path="/event-planning"
-              element={<EventPlanning />}
-            />
+            <ProtectedRoute path="/event-planning">
+              <EventPlanning />
+            </ProtectedRoute>
           }
         />
 
-        {/* 🟢 Personal calendar (students, coaches, etc) */}
+        {/* PERSONAL CALENDAR */}
         <Route
           path="/my-calendar"
           element={
-            <ProtectedRoute
-              path="/my-calendar"
-              element={<MyCalendar />}
-            />
+            <ProtectedRoute path="/my-calendar">
+              <MyCalendar />
+            </ProtectedRoute>
           }
         />
 
-        {/* 🟠 Company-wide calendar */}
+        {/* COMPANY CALENDAR */}
         <Route
           path="/company-calendar"
           element={
-            <ProtectedRoute
-              path="/company-calendar"
-              element={<CompanyCalendar />}
-            />
+            <ProtectedRoute path="/company-calendar">
+              <CompanyCalendar />
+            </ProtectedRoute>
           }
         />
 
-        {/* 🟣 Team manager calendar */}
+        {/* TEAM CALENDAR */}
         <Route
           path="/team-calendar"
           element={
-            <ProtectedRoute
-              path="/team-calendar"
-              element={<TeamCalendar />}
-            />
+            <ProtectedRoute path="/team-calendar">
+              <TeamCalendar />
+            </ProtectedRoute>
           }
         />
       </Route>

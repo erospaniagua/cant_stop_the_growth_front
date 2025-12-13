@@ -18,7 +18,7 @@ export default function MyLearningRoutes() {
       try {
         // 1) Fetch learning routes for the user
         const routeData = await apiClient.get(
-          "/api/learning-routes?matchUserCategories=true",
+          "/api/learning-tracks?matchUserCategories=true",
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -63,7 +63,7 @@ export default function MyLearningRoutes() {
                 hover:border-blue-500 dark:hover:border-blue-400 
                 transition cursor-pointer
               "
-              onClick={() => navigate(`/my-learning-routes/${r._id}`)}
+              onClick={() => navigate(`/my-learning-tracks/${r._id}`)}
             >
               <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-400">
                 {r.title}

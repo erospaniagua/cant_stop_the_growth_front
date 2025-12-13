@@ -137,15 +137,11 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       case "trade":
         if (!Object.values(value).some(Boolean)) return t("requiredTrade");
         break;
-      case "coach":
-        if (!value) return t("requiredCoach");
-        break;
-      case "salesman":
-        if (!value) return t("requiredSalesman");
-        break;
-      case "successManager":
-        if (!value) return t("requiredSuccessManager");
-        break;
+        case "coach":
+        case "salesman":
+        case "successManager":
+  return "";
+
       case "revenue":
         if (!value) return t("requiredRevenue");
         if (Number(value) <= 0) return t("invalidRevenue");
@@ -411,7 +407,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         ["successManager", t("successManager"), successManagerOptions],
       ].map(([name, label, opts]) => (
         <div key={name} className="grid gap-2">
-          <Label>{label} *</Label>
+          <Label>{label} </Label>
 
           <select
             name={name}

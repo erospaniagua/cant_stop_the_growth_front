@@ -1,15 +1,15 @@
 // src/config/nav-items.js
-import { Home, Users, GraduationCap, Settings, BookOpen, Building2, BarChart,LayoutDashboard, CalendarDays, UsersIcon } from "lucide-react"
+import { Home, Users, GraduationCap, Settings, BookOpen, Building2, BarChart,LayoutDashboard, CalendarDays, UsersIcon,CalendarCheck,Puzzle } from "lucide-react"
 
 export const navItems = {
   admin: [
     { title: "dashboard", href: "/", icon: Home },
     { title: "companies", href: "/companies", icon: Building2 },
     { title: "coaches", href: "/coaches", icon: Users },
-    { title: "Learning Routes", href: "/learning-routes", icon: BookOpen },
-    { title: "Event Planning", href: "/event-planning", icon: BookOpen },
+    { title: "Learning Tracks", href: "/learning-tracks", icon: BookOpen },
+    { title: "Event Planning", href: "/event-planning", icon: CalendarCheck },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays }, // Admin calendar
-    { title: "Teams", href: "/teams", icon: UsersIcon },
+    { title: "Teams", href: "/teams", icon: Puzzle },
     { title: "analytics", href: "/analytics", icon: BarChart },
     { title: "Users", href: "/admin/users", icon: Users },
     { title: "settings", href: "/settings", icon: Settings },
@@ -23,7 +23,7 @@ export const navItems = {
   ],
 
   student: [
-    { title: "My Learning Routes", href: "/my-learning-routes", icon: GraduationCap },
+    { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
     { title: "settings", href: "/settings", icon: Settings }
   ],

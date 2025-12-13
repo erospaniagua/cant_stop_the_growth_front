@@ -35,7 +35,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
       if (routeId) {
         setLoading(true);
         try {
-          const data = await apiClient.get(`/api/learning-routes/${routeId}`);
+          const data = await apiClient.get(`/api/learning-tracks/${routeId}`);
           setRoute(data);
           setRouteTitle(data.title || "");
           setRouteDesc(data.description || "");
@@ -46,8 +46,8 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
       } else {
         setCreating(true);
         try {
-          const data = await apiClient.post("/api/learning-routes", {
-            title: "Untitled Learning Route",
+          const data = await apiClient.post("/api/learning-tracks", {
+            title: "Untitled Learning Track",
             description: "",
             categories: ["Leadership"],
           });
@@ -73,7 +73,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
 
     const timer = setTimeout(async () => {
       try {
-        await apiClient.patch(`/api/learning-routes/${route._id}`, {
+        await apiClient.patch(`/api/learning-tracks/${route._id}`, {
           title: routeTitle,
           description: routeDesc,
           categories,
@@ -101,7 +101,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
     if (!route?._id) return;
     try {
       const updated = await apiClient.post(
-        `/api/learning-routes/${route._id}/phases`,
+        `/api/learning-tracks/${route._id}/phases`,
         { title: `Phase ${route.phases?.length + 1 || 1}`, description: "" }
       );
       setRoute(updated);
@@ -125,12 +125,12 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
 
   try {
     const res = await apiClient.patch(
-      `/api/learning-routes/${route._id}/publish`,
+      `/api/learning-tracks/${route._id}/publish`,
       { masterKey }
     );
 
     setRoute(res.route || res);
-    alert("✅ Learning Route published!");
+    alert("✅ Learning Track published!");
     refresh?.();
     handleClose();
   } catch (err) {
@@ -166,7 +166,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
           <input
             value={routeTitle}
             onChange={(e) => setRouteTitle(e.target.value)}
-            placeholder="Untitled Learning Route"
+            placeholder="Untitled Learning Track"
             className="w-full bg-transparent text-xl font-semibold outline-none truncate"
           />
           <input
@@ -193,7 +193,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
             disabled={!route || publishing}
             className="px-3 py-2 text-sm rounded bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50"
           >
-            {publishing ? "Publishing..." : "Publish Route"}
+            {publishing ? "Publishing..." : "Publish Track"}
           </button>
           <button
             onClick={handleClose}
@@ -268,7 +268,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
           routeId={route._id}
           phaseId={showPhaseEditor}
           refresh={() =>
-            apiClient.get(`/api/learning-routes/${route._id}`).then(setRoute)
+            apiClient.get(`/api/learning-tracks/${route._id}`).then(setRoute)
           }
         />
       )}

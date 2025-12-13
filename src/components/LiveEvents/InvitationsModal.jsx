@@ -9,11 +9,11 @@ function inviteKey(inv) {
 }
 
 export default function InvitationsModal({
-  mode = "existing-instance", // "new-instance" OR "existing-instance"
+  mode = "existing-instance", // "new-instance" | "existing-instance"
   instanceId = null,
   initialInvites = [],
   onClose,
-  onConfirm
+  onConfirm,
 }) {
   const [loading, setLoading] = useState(true);
 
@@ -34,13 +34,11 @@ export default function InvitationsModal({
 
   const [manualEmail, setManualEmail] = useState("");
 
-  // FIXED ROLES
   const ROLES = ["student", "coach", "team-manager", "admin"];
-
   const CATEGORIES = ["Leadership", "Sales", "Service", "Office Staff", "Install"];
 
   /* ================================================================
-     LOAD INITIAL INVITES + COMPANIES
+     LOAD DATA
   ================================================================ */
   useEffect(() => {
     if (mode === "existing-instance") {
@@ -53,11 +51,13 @@ export default function InvitationsModal({
 
   async function loadInstanceInvites() {
     try {
-      const data = await apiClient.get(`/api/tour-invites/${instanceId}/list`);
+      const data = await apiClient.get(
+        `/api/tour-invites/${instanceId}/list`
+      );
       setInvites(data);
-      setLoading(false);
     } catch (err) {
       console.error("Load invitations error:", err);
+    } finally {
       setLoading(false);
     }
   }
@@ -72,22 +72,20 @@ export default function InvitationsModal({
   }
 
   /* ================================================================
-     SEARCH USERS
+     SEARCH
   ================================================================ */
   async function searchUsers() {
     try {
       const params = new URLSearchParams();
-
       if (query) params.append("query", query);
       if (selectedCompany) params.append("companyId", selectedCompany);
       if (selectedRole) params.append("roles", selectedRole);
-      if (selectedCats.length > 0)
+      if (selectedCats.length)
         params.append("categories", selectedCats.join(","));
 
       const data = await apiClient.get(
         `/api/tour-invites/search?${params.toString()}`
       );
-
       setSearchResults(data);
     } catch (err) {
       console.error("Search error:", err);
@@ -95,11 +93,10 @@ export default function InvitationsModal({
   }
 
   /* ================================================================
-     TOGGLE INVITE
+     INVITES
   ================================================================ */
   function toggleInvite(user) {
     const key = user._id || user.email;
-
     const exists = invites.some(inv => inviteKey(inv) === key);
 
     if (exists) {
@@ -122,35 +119,24 @@ export default function InvitationsModal({
     }
   }
 
-  /* ================================================================
-     MANUAL EMAIL
-  ================================================================ */
   function addManualEmail() {
     const email = manualEmail.trim();
     if (!email) return;
-
-    const exists = invites.some(inv => inviteKey(inv) === email);
-    if (exists) return;
+    if (invites.some(inv => inviteKey(inv) === email)) return;
 
     setInvites(prev => [...prev, { _id: "local-email", email }]);
-
     if (mode === "existing-instance") {
       setPendingAdds(prev => [...prev, email]);
     }
-
     setManualEmail("");
   }
 
-  /* ================================================================
-     COMMIT CHANGES
-  ================================================================ */
   async function commitChanges() {
     try {
-      await apiClient.post(`/api/tour-invites/${instanceId}/bulk-commit`, {
-        add: pendingAdds,
-        remove: pendingRemoves
-      });
-
+      await apiClient.post(
+        `/api/tour-invites/${instanceId}/bulk-commit`,
+        { add: pendingAdds, remove: pendingRemoves }
+      );
       await loadInstanceInvites();
       setPendingAdds([]);
       setPendingRemoves([]);
@@ -161,64 +147,70 @@ export default function InvitationsModal({
     }
   }
 
-  /* ================================================================
-     CONFIRM NEW INSTANCE
-  ================================================================ */
   function confirmForNewInstance() {
-    const cleaned = invites.map(inv => inviteKey(inv));
-    onConfirm(cleaned);
+    onConfirm(invites.map(inv => inviteKey(inv)));
   }
 
-  /* ================================================================
-     CATEGORY SELECT
-  ================================================================ */
   function toggleCategory(cat) {
-    if (selectedCats.includes(cat)) {
-      setSelectedCats(prev => prev.filter(c => c !== cat));
-    } else {
-      setSelectedCats(prev => [...prev, cat]);
-    }
+    setSelectedCats(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
   }
 
   /* ================================================================
      RENDER
   ================================================================ */
-
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-        <div className="bg-white p-6 rounded shadow text-center">Loading…</div>
+        <div className="bg-white dark:bg-neutral-900 p-6 rounded shadow text-center">
+          Loading…
+        </div>
       </div>
     );
   }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-5xl h-[90vh] overflow-y-auto space-y-6">
-
+      <div className="
+        bg-white dark:bg-neutral-900
+        text-neutral-900 dark:text-neutral-100
+        rounded-lg p-6 shadow-xl
+        w-full max-w-5xl h-[90vh]
+        overflow-y-auto space-y-6
+      ">
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">
             {mode === "new-instance" ? "Select Invitations" : "Manage Invitations"}
           </h2>
-          <button onClick={onClose} className="text-gray-600 hover:text-black">✕</button>
+          <button
+            onClick={onClose}
+            className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          >
+            ✕
+          </button>
         </div>
 
-        {/* FILTER + ACTION BAR */}
-        <div className="flex flex-wrap items-end gap-3 pb-4 border-b">
-
+        {/* FILTER BAR */}
+        <div className="flex flex-wrap gap-3 items-end border-b pb-4">
           <input
-            type="text"
             placeholder="Search name or email"
-            className="p-2 border rounded w-56"
             value={query}
             onChange={e => setQuery(e.target.value)}
+            className="
+              p-2 w-56 rounded border
+              bg-white dark:bg-neutral-800
+              border-neutral-300 dark:border-neutral-700
+              text-neutral-900 dark:text-neutral-100
+              placeholder-neutral-400 dark:placeholder-neutral-500
+            "
           />
 
           <select
-            className="p-2 border rounded w-40"
             value={selectedCompany}
             onChange={e => setSelectedCompany(e.target.value)}
+            className="p-2 w-40 rounded border bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700"
           >
             <option value="">All Companies</option>
             {companies.map(c => (
@@ -227,9 +219,9 @@ export default function InvitationsModal({
           </select>
 
           <select
-            className="p-2 border rounded w-40"
             value={selectedRole}
             onChange={e => setSelectedRole(e.target.value)}
+            className="p-2 w-40 rounded border bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700"
           >
             <option value="">All Roles</option>
             {ROLES.map(r => <option key={r}>{r}</option>)}
@@ -239,12 +231,11 @@ export default function InvitationsModal({
             {CATEGORIES.map(cat => (
               <button
                 key={cat}
-                type="button"
                 onClick={() => toggleCategory(cat)}
-                className={`px-2 py-1 border rounded text-sm ${
+                className={`px-2 py-1 rounded text-sm border ${
                   selectedCats.includes(cat)
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    : "bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 }`}
               >
                 {cat}
@@ -262,7 +253,7 @@ export default function InvitationsModal({
           {mode === "existing-instance" ? (
             <button
               onClick={commitChanges}
-              disabled={pendingAdds.length === 0 && pendingRemoves.length === 0}
+              disabled={!pendingAdds.length && !pendingRemoves.length}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
             >
               Apply Changes
@@ -275,19 +266,17 @@ export default function InvitationsModal({
               Confirm
             </button>
           )}
-
         </div>
 
         {/* MANUAL EMAIL */}
-        <div className="flex space-x-2 items-center">
+        <div className="flex gap-2">
           <input
             type="email"
-            placeholder="Manual email invite"
-            className="p-2 border rounded flex-1"
             value={manualEmail}
             onChange={e => setManualEmail(e.target.value)}
+            placeholder="Manual email invite"
+            className="flex-1 p-2 rounded border bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700"
           />
-
           <button
             onClick={addManualEmail}
             className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
@@ -296,78 +285,48 @@ export default function InvitationsModal({
           </button>
         </div>
 
-        {/* MAIN GRID */}
+        {/* GRID */}
         <div className="grid grid-cols-2 gap-6">
+          {[["Search Results", searchResults], ["Current Invited", invites]].map(
+            ([title, list]) => (
+              <div
+                key={title}
+                className="border rounded p-4 space-y-3 bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700"
+              >
+                <h3 className="font-semibold">{title}</h3>
 
-          {/* SEARCH RESULTS */}
-          <div className="border rounded p-4 space-y-4">
-            <h3 className="text-lg font-semibold">Search Results</h3>
-
-            {searchResults.length === 0 ? (
-              <p className="text-gray-500">No results.</p>
-            ) : (
-              searchResults.map(s => {
-                const already = invites.some(inv => inviteKey(inv) === s._id);
-
-                return (
-                  <div key={s._id} className="flex justify-between border p-2 rounded">
-                    <div>
-                      <div className="font-medium">{s.name}</div>
-                      <div className="text-sm">{s.email}</div>
-                      <div className="text-xs text-gray-500">
-                        {s.role} • {(s.categories || []).join(", ")}
+                {list.length === 0 ? (
+                  <p className="text-neutral-500 dark:text-neutral-400">No entries.</p>
+                ) : (
+                  list.map(item => (
+                    <div
+                      key={inviteKey(item)}
+                      className="flex justify-between items-center p-2 rounded border bg-neutral-50 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700"
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {item.userId?.name || item.email}
+                        </div>
+                        <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                          {item.userId?.email || "Manual email"}
+                        </div>
                       </div>
+
+                      <button
+                        onClick={() =>
+                          toggleInvite(item.userId || { email: item.email })
+                        }
+                        className="px-2 py-1 text-sm bg-red-600 text-white rounded"
+                      >
+                        Remove
+                      </button>
                     </div>
-
-                    <input
-                      type="checkbox"
-                      checked={already}
-                      onChange={() => toggleInvite(s)}
-                    />
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* CURRENT INVITES */}
-          <div className="border rounded p-4 space-y-4">
-            <h3 className="text-lg font-semibold">
-              {mode === "new-instance" ? "Selected Invitations" : "Current Invited"}
-            </h3>
-
-            {invites.length === 0 ? (
-              <p className="text-gray-500">No invitations.</p>
-            ) : (
-              invites.map(inv => (
-                <div key={inviteKey(inv)} className="flex justify-between border p-2 rounded">
-                  <div>
-                    {inv.userId ? (
-                      <>
-                        <div className="font-medium">{inv.userId.name}</div>
-                        <div className="text-sm">{inv.userId.email}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="font-medium">{inv.email}</div>
-                        <div className="text-sm text-gray-500">Manual email</div>
-                      </>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => toggleInvite(inv.userId || { email: inv.email })}
-                    className="px-2 py-1 bg-red-600 text-white rounded text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-
+                  ))
+                )}
+              </div>
+            )
+          )}
         </div>
-
       </div>
     </div>
   );
