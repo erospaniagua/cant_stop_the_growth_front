@@ -1,47 +1,76 @@
- import { useUser } from "@/context/UserContext"
- import { useState } from "react"
- import { NavLink } from "react-router-dom"
- export function UserBadge() {
+import { useUser } from "@/context/UserContext";
+import { useState, useRef, useEffect } from "react";
+
+export function UserBadge() {
   const { user } = useUser();
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
 
   if (!user) return null;
 
   const initials = user.name
     .split(" ")
-    .map((n) => n[0])
+    .map(n => n[0])
     .join("")
     .toUpperCase();
 
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div ref={ref} className="relative flex justify-center">
+      {/* Avatar */}
       <button
-        onClick={() => setOpen(!open)}
-        className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer"
+        onClick={() => setOpen(o => !o)}
+        className="
+          w-10 h-10 rounded-full
+          bg-blue-600 text-white
+          flex items-center justify-center
+          text-sm font-semibold
+          hover:opacity-90 transition
+        "
       >
         {initials}
       </button>
 
+      {/* Info card */}
       {open && (
-        <div className=" right-0 bottom-12 w-56 bg-black dark:bg-neutral-900 shadow-lg rounded-md p-3 text-sm border">
-          <div className="font-bold">{user.name}</div>
-          <div className="text-xs opacity-80">{user.email}</div>
+        <div
+          className="
+            absolute bottom-12 left-0 translate-x-4
+    w-60
+    rounded-lg p-4
+    bg-white dark:bg-neutral-900
+    text-neutral-900 dark:text-neutral-100
+    border border-neutral-200 dark:border-neutral-800
+    shadow-xl
+    text-sm
+    z-50
+          "
+        >
+          <div className="font-semibold">{user.name}</div>
+          <div className="text-xs text-neutral-500 dark:text-neutral-400 break-all">
+            {user.email}
+          </div>
 
-          {user.companyId?.name && (
-            <div className="mt-2 pt-2 border-t text-xs">
-              <span className="opacity-70">Company: </span>
-              <span className="font-medium">{user.companyId.name}</span>
+          {user.company?.name && (
+            <div className="mt-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                Company
+              </div>
+              <div className="font-medium">
+                {user.company.name}
+              </div>
             </div>
           )}
-
-          <div className="mt-3 pt-2 border-t">
-            <NavLink
-              to="/config"
-              className="text-blue-500 text-xs hover:underline"
-            >
-              View profile
-            </NavLink>
-          </div>
         </div>
       )}
     </div>

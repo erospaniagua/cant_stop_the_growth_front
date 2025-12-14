@@ -122,38 +122,49 @@ async function loadCoaches() {
   // Final Create Instance (after modal returns invites)
   // ============================================================
   async function handleCreateInstance(invitesList) {
-    try {
-      setSaving(true);
+  try {
+    setSaving(true);
 
-      const payload = {
-  title: instanceTitle,
-  description: instanceDescription,
-  sessions: sessionDates.map(s => ({
-    sessionId: s.sessionId,
-    assignedDate: s.assignedDate || null
-  })),
-  autoEnroll,
-  invites: invitesList,   // from modal
-  coachId: coachId || null,
-  zoomUrl: zoomUrl || null
-};
+    const payload = {
+      title: instanceTitle,
+      description: instanceDescription,
+      sessions: sessionDates.map(s => ({
+        sessionId: s.sessionId,
+        assignedDate: s.assignedDate || null
+      })),
+      autoEnroll,
+      coachId: coachId || null,
+      zoomUrl: zoomUrl || null
+    };
 
+    // 1️⃣ Create instance
+    const instance = await apiClient.post(
+      `/api/event-templates/${templateId}/use`,
+      payload
+    );
 
-      const instance = await apiClient.post(
-        `/api/event-templates/${templateId}/use`,
-        payload
+    // 2️⃣ Commit initial invites (THIS WAS MISSING)
+    if (invitesList?.length) {
+      await apiClient.post(
+        `/api/tour-invites/${instance._id}/bulk-commit`,
+        {
+          add: invitesList,
+          remove: []
+        }
       );
-
-      onCreatedInstance(instance._id);
-
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Error creating instance");
-    } finally {
-      setSaving(false);
-      setShowInvites(false);
     }
+
+    onCreatedInstance(instance._id);
+
+  } catch (err) {
+    console.error(err);
+    setError(err.message || "Error creating instance");
+  } finally {
+    setSaving(false);
+    setShowInvites(false);
   }
+}
+
 
   // ============================================================
   // RENDER

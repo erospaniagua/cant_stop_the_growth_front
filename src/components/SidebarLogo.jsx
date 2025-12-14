@@ -18,7 +18,7 @@ export default function SidebarLogo() {
       : companyLogo
 
   return (
-    <div className="h-10 flex items-center justify-center border-b">
+    <div className="h-14 flex items-center justify-center border-b">
       <img
         src={logoSrc}
         alt="Logo"

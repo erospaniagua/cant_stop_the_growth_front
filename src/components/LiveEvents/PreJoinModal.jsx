@@ -21,8 +21,8 @@ export default function PreJoinModal({ event, currentUser, onClose }) {
       setStream(media);
       setCameraOn(true);
       setMicOn(true);
-    } catch (err) {
-      setError("Camera/microphone not accessible.");
+    } catch {
+      setError("Camera or microphone not accessible.");
     }
   }
 
@@ -32,16 +32,16 @@ export default function PreJoinModal({ event, currentUser, onClose }) {
 
   function toggleCamera() {
     if (!stream) return;
-    const videoTrack = stream.getVideoTracks()[0];
-    videoTrack.enabled = !videoTrack.enabled;
-    setCameraOn(videoTrack.enabled);
+    const track = stream.getVideoTracks()[0];
+    track.enabled = !track.enabled;
+    setCameraOn(track.enabled);
   }
 
   function toggleMic() {
     if (!stream) return;
-    const audioTrack = stream.getAudioTracks()[0];
-    audioTrack.enabled = !audioTrack.enabled;
-    setMicOn(audioTrack.enabled);
+    const track = stream.getAudioTracks()[0];
+    track.enabled = !track.enabled;
+    setMicOn(track.enabled);
   }
 
   function joinZoom() {
@@ -60,23 +60,43 @@ export default function PreJoinModal({ event, currentUser, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-4">
-
-        <h2 className="text-xl font-semibold">Check your devices</h2>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+      <div className="
+        w-full max-w-md rounded-xl p-6 space-y-5
+        bg-white dark:bg-neutral-900
+        text-neutral-900 dark:text-neutral-100
+        shadow-xl border
+        border-neutral-200 dark:border-neutral-800
+      ">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Check your devices</h2>
+          <button
+            onClick={() => { cleanup(); onClose(); }}
+            className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
 
         {/* Video preview */}
-        <div className="bg-black rounded-md overflow-hidden h-48 flex items-center justify-center">
+        <div className="
+          h-48 rounded-lg overflow-hidden
+          bg-neutral-900 flex items-center justify-center
+          border border-neutral-700
+        ">
           {stream && cameraOn ? (
             <video
               autoPlay
               playsInline
               muted
-              ref={(video) => video && (video.srcObject = stream)}
+              ref={(el) => el && (el.srcObject = stream)}
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-gray-300">Camera off</span>
+            <span className="text-neutral-400 text-sm">
+              Camera is off
+            </span>
           )}
         </div>
 
@@ -84,36 +104,52 @@ export default function PreJoinModal({ event, currentUser, onClose }) {
         <div className="flex gap-3">
           <button
             onClick={toggleCamera}
-            className="px-3 py-1 bg-gray-200 rounded"
+            className={`
+              flex-1 py-2 rounded-md text-sm font-medium
+              transition
+              ${cameraOn
+                ? "bg-blue-600 text-white hover:bg-blue-500"
+                : "bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700"}
+            `}
           >
             {cameraOn ? "Turn camera off" : "Turn camera on"}
           </button>
 
           <button
             onClick={toggleMic}
-            className="px-3 py-1 bg-gray-200 rounded"
+            className={`
+              flex-1 py-2 rounded-md text-sm font-medium
+              transition
+              ${micOn
+                ? "bg-blue-600 text-white hover:bg-blue-500"
+                : "bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700"}
+            `}
           >
             {micOn ? "Mute mic" : "Unmute mic"}
           </button>
         </div>
 
         {error && (
-          <div className="text-red-500 text-sm">{error}</div>
+          <div className="text-sm text-red-500 text-center">
+            {error}
+          </div>
         )}
 
+        {/* Join */}
         <button
           onClick={joinZoom}
-          className="w-full bg-blue-600 text-white p-2 rounded mt-2"
+          className="
+            w-full py-2 rounded-md font-semibold
+            bg-green-600 text-white
+            hover:bg-green-500 transition
+          "
         >
           Join session
         </button>
 
-        <button
-          onClick={() => { cleanup(); onClose(); }}
-          className="w-full text-gray-600 text-sm mt-2"
-        >
-          Cancel
-        </button>
+        <p className="text-xs text-center text-neutral-500">
+          Your camera and microphone can be changed later.
+        </p>
       </div>
     </div>
   );
