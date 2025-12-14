@@ -44,19 +44,26 @@ export default function MyLearningRoutePreview() {
 
   // 🔥 1. Flatten all lessons in order
   const allLessons = []
-  route.phases.forEach((phase) => {
-    phase.course.modules.forEach((mod) => {
-      mod.lessons.forEach((lesson) => {
-        allLessons.push({
-          ...lesson,
-          phaseId: phase._id,
-          moduleId: mod._id,
-          phase,
-          mod,
-        })
+
+route.phases?.forEach((phase) => {
+  const modules = phase?.course?.modules
+  if (!Array.isArray(modules)) return
+
+  modules.forEach((mod) => {
+    if (!Array.isArray(mod.lessons)) return
+
+    mod.lessons.forEach((lesson) => {
+      allLessons.push({
+        ...lesson,
+        phaseId: phase._id,
+        moduleId: mod._id,
+        phase,
+        mod,
       })
     })
   })
+})
+
 
   // 🔥 2. Find next incomplete lesson
   const nextLesson =
@@ -127,12 +134,12 @@ export default function MyLearningRoutePreview() {
               {phase.title}
             </h3>
 
-            {phase.course.modules.map((mod) => (
+            {phase.course?.modules.map((mod) => (
               <div key={mod._id} className="mb-3">
                 <p className="text-sm font-medium mb-2">{mod.title}</p>
 
                 <ul className="space-y-1">
-                  {mod.lessons.map((lesson) => {
+                  {mod.lessons?.map((lesson) => {
                     const unlocked = isLessonUnlocked(lesson)
                     const completed = completedLessons.includes(lesson._id)
 
