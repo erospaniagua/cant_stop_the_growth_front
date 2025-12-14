@@ -1,41 +1,31 @@
 import { useState, useEffect } from "react";
 import { uploadToAWS } from "@/utils/uploadToAWS.js";
+import { v4 as uuidv4 } from "uuid";
 
-/**
- * PdfEditor — uploads the selected PDF to staging/<courseId>/
- * Shows progress bar + disables closing while uploading.
- */
 export default function PdfEditor({ module, onChange }) {
+  const lessonId = module.payload?.lessonId || uuidv4();
+
   const [title, setTitle] = useState(module.title || "");
   const [file, setFile] = useState(module.payload?.file || null);
 
-  // ✅ Prefer signedUrl when available (for reopened published phases)
   const [preview, setPreview] = useState(
-    module.payload?.signedUrl ||
+    module.payload?.preview ||
       module.payload?.uploadedUrl ||
       module.payload?.fileUrl ||
-      module.payload?.preview ||
       null
   );
 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  /* ===========================================================
-     Sync title/preview when module changes externally
-  =========================================================== */
   useEffect(() => {
     setTitle(module.title || "");
 
-    if (module.payload?.signedUrl) setPreview(module.payload.signedUrl);
-    else if (module.payload?.uploadedUrl) setPreview(module.payload.uploadedUrl);
-    else if (module.payload?.fileUrl) setPreview(module.payload.fileUrl);
-    else if (module.payload?.preview) setPreview(module.payload.preview);
+    if (module.payload?.fileUrl) setPreview(module.payload.fileUrl);
+    if (module.payload?.uploadedUrl) setPreview(module.payload.uploadedUrl);
+    if (module.payload?.preview) setPreview(module.payload.preview);
   }, [module]);
 
-  /* ===========================================================
-     Handle file select → upload to S3 with progress tracking
-  =========================================================== */
   const handleFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -44,12 +34,13 @@ export default function PdfEditor({ module, onChange }) {
     setFile(f);
     setPreview(blob);
 
-    // ✅ Optimistic update
+    // Immediate optimistic update
     onChange?.({
       ...module,
       title,
       payload: {
         ...module.payload,
+        lessonId,
         file: f,
         preview: blob,
       },
@@ -61,41 +52,37 @@ export default function PdfEditor({ module, onChange }) {
 
       const courseId = module.courseId || module._id || "temp";
 
-      // 1️⃣ Request presigned URL
+      // 1) Request presigned URL
       const { uploadUrl, fileUrl } = await uploadToAWS.getPresignedUrl(
         f,
         courseId,
-        module.type || "pdf"
+        "pdf"
       );
 
-      // 2️⃣ Upload to S3 with progress tracking
+      // 2) Upload with progress
       await uploadWithProgress(uploadUrl, f, setProgress);
 
-      // 3️⃣ Notify parent
+      // 3) Finalize
       onChange?.({
         ...module,
         title,
         payload: {
           ...module.payload,
+          lessonId,
           uploadedUrl: fileUrl,
           fileUrl,
           preview: fileUrl,
         },
       });
-
-      console.log("✅ PDF uploaded:", fileUrl);
     } catch (err) {
       console.error("❌ PDF upload failed:", err);
-      alert("Upload failed. Please try again.");
+      alert("Upload failed. Try again.");
     } finally {
       setUploading(false);
       setProgress(0);
     }
   };
 
-  /* ===========================================================
-     Helper: upload with progress using XMLHttpRequest
-  =========================================================== */
   const uploadWithProgress = (url, file, onProgress) => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -113,7 +100,7 @@ export default function PdfEditor({ module, onChange }) {
         else reject(new Error("S3 upload failed"));
       };
 
-      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.onerror = () => reject(new Error("Network Error"));
       xhr.send(file);
     });
   };
@@ -122,63 +109,62 @@ export default function PdfEditor({ module, onChange }) {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">📄 Lecture (PDF)</h2>
 
-      {/* Title input */}
       <input
         type="text"
         value={title}
         onChange={(e) => {
           const newTitle = e.target.value;
           setTitle(newTitle);
-          onChange?.({ ...module, title: newTitle });
+
+          onChange?.({
+            ...module,
+            title: newTitle,
+            payload: {
+              ...module.payload,
+              lessonId,
+            },
+          });
         }}
-        placeholder="PDF title"
         className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded text-white text-sm"
+        placeholder="PDF title"
         disabled={uploading}
       />
 
-      {/* Upload field */}
       <div className="border border-neutral-700 p-4 rounded-lg text-center relative">
         <input
           type="file"
           accept="application/pdf"
           onChange={handleFile}
           className="hidden"
-          id={`pdf-upload-${module._id || "temp"}`}
+          id={`pdf-upload-${lessonId}`}
           disabled={uploading}
         />
 
         <label
-          htmlFor={`pdf-upload-${module._id || "temp"}`}
+          htmlFor={`pdf-upload-${lessonId}`}
           className={`cursor-pointer ${
             uploading ? "text-neutral-500" : "text-green-400 hover:text-green-300"
           }`}
         >
-          {uploading
-            ? "Uploading..."
-            : file
-            ? "Replace PDF"
-            : "Upload PDF"}
+          {uploading ? "Uploading..." : file ? "Replace PDF" : "Upload PDF"}
         </label>
 
-        {/* Warning while uploading */}
         {uploading && (
-          <p className="mt-3 text-yellow-400 text-sm font-medium">
-            ⚠️ Please don’t close or refresh this window while uploading.
-          </p>
+          <>
+            <p className="mt-3 text-yellow-400 text-sm">
+              ⚠️ Don't close the window.
+            </p>
+
+            <div className="w-full bg-neutral-800 h-2 rounded-full mt-3 overflow-hidden">
+              <div
+                className="bg-green-500 h-2 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </>
         )}
 
-        {/* Progress bar */}
-        {uploading && (
-          <div className="w-full bg-neutral-800 h-2 rounded-full mt-3 overflow-hidden">
-            <div
-              className="bg-green-500 h-2 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-        )}
-
-        {/* PDF Preview */}
-        {preview && !uploading && (
+        {!uploading && preview && (
           <iframe
             src={preview}
             className="mt-4 w-full h-80 rounded-lg border border-neutral-700"
@@ -189,16 +175,3 @@ export default function PdfEditor({ module, onChange }) {
     </div>
   );
 }
-
-/* ===========================================================
-   Patch: make uploadToAWS.getPresignedUrl work directly
-   (add this helper inside uploadToAWS.js if not yet)
-=========================================================== */
-// Example usage reference:
-// uploadToAWS.getPresignedUrl = async (file, courseId, type) => {
-//   return await apiClient.post("/api/presign", {
-//     filename: file.name,
-//     folder: `staging/${courseId}`,
-//     type,
-//   });
-// };

@@ -1,41 +1,57 @@
-import { Navigate, useLocation } from "react-router-dom"
-import { useUser } from "@/context/UserContext"
-import { permissions } from "@/config/permissions"
-import { jwtDecode } from "jwt-decode"
+import { Navigate, useLocation } from "react-router-dom";
+import { useUser } from "@/context/UserContext";
+import { permissions } from "@/config/permissions";
+import { jwtDecode } from "jwt-decode";
 
-export default function ProtectedRoute({ element, path }) {
-  const { user, token, logout, loading } = useUser()
-  const location = useLocation()
+function pathMatches(allowedPath, currentPath) {
+  const regex = new RegExp(
+    "^" +
+      allowedPath
+        .replace(/:[^/]+/g, "[^/]+")
+        .replace(/\//g, "\\/") +
+      "$"
+  );
+  return regex.test(currentPath);
+}
 
-  // ⏳ Wait for context to initialize
-  if (loading) return null
+export default function ProtectedRoute({ children, path }) {
+  const { user, token, logout, loading } = useUser();
+  const location = useLocation();
 
-  // 🚫 If no token or no user → redirect to login
+  if (loading) return null;
+
   if (!user || !token) {
-    logout?.()
-    return <Navigate to="/login" state={{ from: location }} replace />
+    logout?.();
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 🧠 Check if token expired
   try {
-    const decoded = jwtDecode(token)
+    const decoded = jwtDecode(token);
     if (Date.now() >= decoded.exp * 1000) {
-      logout?.()
-      return <Navigate to="/login" state={{ from: location }} replace />
+      logout?.();
+      return <Navigate to="/login" state={{ from: location }} replace />;
     }
   } catch (err) {
-    logout?.()
-    return <Navigate to="/login" state={{ from: location }} replace />
+    logout?.();
+    return <Navigate to="/login" replace />;
   }
 
-  // 🔒 Force password change before any other route
   if (user.mustChangePassword && location.pathname !== "/settings") {
-    return <Navigate to="/settings" replace />
+    return <Navigate to="/settings" replace />;
   }
 
-  // 🧩 Role-based permission check (your existing logic)
-  const allowedRoutes = permissions[user.role]?.routes || []
-  if (!allowedRoutes.includes(path)) return <Navigate to="/" replace />
+  const allowedRoutes = permissions[user.role]?.routes || [];
 
-  return element
+  const currentPath = location.pathname;
+
+const isAllowed = allowedRoutes.some((allowed) =>
+  pathMatches(allowed, currentPath)
+);
+
+
+  if (!isAllowed) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }

@@ -4,7 +4,7 @@ import { apiClient } from "@/api/client.js";
 import CourseFlowBuilder from "@/components/LearningRoute/CourseFlowBuilder";
 import QuizEditor from "@/components/LearningRoute/QuizEditor";
 import VideoEditor from "@/components/LearningRoute/VideoEditor";
-import PdfEditor from "@/components/LearningRoute/PdfEditor_temp";
+import PdfEditor from "@/components/LearningRoute/PdfEditor"
 
 export default function PhaseEditor({ open, onClose, routeId, phaseId, refresh }) {
   const { theme } = useTheme();
@@ -24,7 +24,7 @@ export default function PhaseEditor({ open, onClose, routeId, phaseId, refresh }
     if (!open || !routeId || !phaseId) return;
     setLoading(true);
     apiClient
-      .get(`/api/learning-routes/${routeId}/phases/${phaseId}`)
+      .get(`/api/learning-tracks/${routeId}/phases/${phaseId}`)
       .then((data) => setPhase(data))
       .catch((err) => {
         console.error("❌ Error loading phase:", err);
@@ -79,7 +79,7 @@ export default function PhaseEditor({ open, onClose, routeId, phaseId, refresh }
     if (!phase?._id) return;
     setSaving(true);
     try {
-      await apiClient.patch(`/api/learning-routes/${routeId}/phases/${phaseId}`, phase);
+      await apiClient.patch(`/api/learning-tracks/${routeId}/phases/${phaseId}`, phase);
       alert("✅ Draft saved!");
       refresh?.();
     } catch (err) {
@@ -98,7 +98,7 @@ export default function PhaseEditor({ open, onClose, routeId, phaseId, refresh }
     setSaving(true);
     try {
       await apiClient.patch(
-        `/api/learning-routes/${routeId}/phases/${phaseId}/publish`,
+        `/api/learning-tracks/${routeId}/phases/${phaseId}/publish`,
         phase
       );
       alert("✅ Phase published successfully!");

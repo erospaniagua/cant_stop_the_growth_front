@@ -118,17 +118,22 @@ export default function CourseFlowBuilder({
       });
 
       (mod.lessons || []).forEach((l, i) => {
-        const id = `${modId}-l${i + 1}`;
-        allNodes.push({
-          id,
-          type: l.type,
-          data: { label: l.title },
-          position:
-            oldPositions.get(id) ||
-            l.payload?.position || { x: (mIndex + 1) * 250 + (i + 1) * 200, y: 150 },
-          draggable: !readOnly,
-        });
-      });
+  const id = `${modId}-l${i + 1}`;
+
+  allNodes.push({
+    id,
+    type: l.type,
+    data: {
+      label: l.title,
+      lessonId: l.payload?.lessonId || crypto.randomUUID(),
+    },
+    position:
+      oldPositions.get(id) ||
+      l.payload?.position || { x: (mIndex + 1) * 250 + (i + 1) * 200, y: 150 },
+    draggable: !readOnly,
+  });
+});
+
     });
 
     const all = [...base, ...allNodes];
@@ -178,18 +183,22 @@ export default function CourseFlowBuilder({
     const last = nodes[nodes.length - 1];
     const id = crypto.randomUUID();
 
-    const newNode = {
-      id,
-      type,
-      data: {
-        label:
-          type === "moduleBreak"
-            ? `Module ${modules.length + 1}`
-            : title,
-      },
-      position: { x: last.position.x + 220, y: 150 },
-      draggable: true,
-    };
+    const lessonId = crypto.randomUUID();
+
+const newNode = {
+  id,
+  type,
+  data: {
+    label:
+      type === "moduleBreak"
+        ? `Module ${modules.length + 1}`
+        : title,
+    lessonId, // <-- ADD THIS
+  },
+  position: { x: last.position.x + 220, y: 150 },
+  draggable: true,
+};
+
 
     const newEdge = {
       id: `${last.id}-${id}`,
@@ -222,57 +231,66 @@ export default function CourseFlowBuilder({
      🔍 Group nodes -> modules structure (preserve payloads)
   =========================================================== */
   const groupNodesIntoModules = (allNodes, prevModules = []) => {
-    const result = [];
-    let currentModule = null;
+  const result = [];
+  let currentModule = null;
 
-    const findOldLesson = (title) =>
-      prevModules
-        .flatMap((m) => m.lessons || [])
-        .find((l) => l.title === title);
+  // Helper: find previous lesson by lessonId
+  const findOldLesson = (lessonId) =>
+    prevModules
+      .flatMap((m) => m.lessons || [])
+      .find((l) => l.payload?.lessonId === lessonId);
 
-    allNodes.forEach((n) => {
-      if (n.type === "moduleBreak") {
-        if (currentModule) result.push(currentModule);
-        currentModule = { title: n.data.label, lessons: [] };
-      } else if (!["input"].includes(n.type)) {
-        if (!currentModule) currentModule = { title: "Module 1", lessons: [] };
-        const oldLesson = findOldLesson(n.data.label);
-        currentModule.lessons.push({
-          type: n.type,
-          title: n.data.label,
-          payload: {
-            ...oldLesson?.payload,
-            position: n.position,
-          },
-        });
-      }
-    });
-    if (currentModule) result.push(currentModule);
-    return result;
-  };
+  allNodes.forEach((n) => {
+    if (n.type === "moduleBreak") {
+      if (currentModule) result.push(currentModule);
+      currentModule = { title: n.data.label, lessons: [] };
+    } else if (!["input"].includes(n.type)) {
+      if (!currentModule)
+        currentModule = { title: "Module 1", lessons: [] };
+
+      const oldLesson = findOldLesson(n.data.lessonId);
+
+      currentModule.lessons.push({
+        type: n.type,
+        title: n.data.label,
+        payload: {
+          lessonId: n.data.lessonId, // <-- UNIQUE KEY
+          ...(oldLesson?.payload || {}),
+          position: n.position,
+        },
+      });
+    }
+  });
+
+  if (currentModule) result.push(currentModule);
+
+  return result;
+};
+
 
   /* ===========================================================
      🖱️ Node click → open lesson editor
   =========================================================== */
   const handleNodeClick = (_, node) => {
-    if (readOnly || node.type === "input" || node.type === "moduleBreak") return;
-    const grouped = groupNodesIntoModules(nodes, modules);
-    let foundModuleIndex = -1;
-    let foundLesson = null;
+  if (readOnly || node.type === "input" || node.type === "moduleBreak") return;
 
-    grouped.forEach((mod, i) => {
-      mod.lessons.forEach((l, li) => {
-        const nodeId = `${mod.title}-l${li + 1}`;
-        if (l.title === node.data.label && !foundLesson) {
-          foundModuleIndex = i;
-          foundLesson = { ...l, index: li, id: node.id };
-        }
-      });
+  const grouped = groupNodesIntoModules(nodes, modules);
+  let foundModuleIndex = -1;
+  let foundLesson = null;
+
+  grouped.forEach((mod, i) => {
+    mod.lessons.forEach((l, li) => {
+      if (l.payload?.lessonId === node.data.lessonId && !foundLesson) {
+        foundModuleIndex = i;
+        foundLesson = { ...l, index: li, id: node.id };
+      }
     });
+  });
 
-    if (foundLesson)
-      setActiveNode({ moduleIndex: foundModuleIndex, lesson: foundLesson });
-  };
+  if (foundLesson)
+    setActiveNode({ moduleIndex: foundModuleIndex, lesson: foundLesson });
+};
+
 
   /* ===========================================================
      🌈 Styling
@@ -386,34 +404,35 @@ export default function CourseFlowBuilder({
             </button>
 
             <EditorComponent
-              module={{ ...activeNode.lesson, courseId }}
-              onChange={(data) => {
-  const grouped = structuredClone(groupNodesIntoModules(nodes, modules));
-  const modIdx = activeNode.moduleIndex;
+  module={{ ...activeNode.lesson, courseId }}
+  onChange={(data) => {
+    const grouped = structuredClone(groupNodesIntoModules(nodes, modules));
+    const modIdx = activeNode.moduleIndex;
 
-  // 🧱 Build a clean updated lesson object
-  const updatedLesson = {
-    ...activeNode.lesson,
-    title: data.title ?? activeNode.lesson.title,
-    payload: {
-      ...activeNode.lesson.payload,
-      ...data.payload,
-    },
-  };
+    const lessonId =
+      activeNode.lesson?.payload?.lessonId ||
+      data.payload?.lessonId;
 
-  // ✅ Safely replace (no direct mutation)
-  if (grouped[modIdx]?.lessons) {
-    grouped[modIdx].lessons = grouped[modIdx].lessons.map((l, idx) =>
-      idx === activeNode.lesson.index ? updatedLesson : l
+    const updatedLesson = {
+      ...activeNode.lesson,
+      title: data.title ?? activeNode.lesson.title,
+      payload: {
+        ...activeNode.lesson.payload,
+        ...data.payload,
+        lessonId,
+      },
+    };
+
+    // Replace correct lesson
+    grouped[modIdx].lessons = grouped[modIdx].lessons.map((l) =>
+      l.payload?.lessonId === lessonId ? updatedLesson : l
     );
-  }
 
-  // 🔄 Update parent + local active node
-  onChange?.(structuredClone(grouped)); // force React to detect a new object
-  setActiveNode({ moduleIndex: modIdx, lesson: updatedLesson });
-}}
+    onChange?.(structuredClone(grouped));
+    setActiveNode({ moduleIndex: modIdx, lesson: updatedLesson });
+  }}
+/>
 
-            />
           </div>
         </div>
       )}

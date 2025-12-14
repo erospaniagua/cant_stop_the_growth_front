@@ -21,8 +21,10 @@ import { CompanyDialog } from "@/components/CompanyDialog";
 import { apiClient } from "@/api/client";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@/context/UserContext";
+import { useAdminConfirm } from "@/context/AdminConfirmContext";
 
 export default function Companies() {
+  const askAdminKey = useAdminConfirm();
   const { t } = useTranslation();
   const { token } = useUser();
 
@@ -72,21 +74,21 @@ export default function Companies() {
   };
 
   const handleArchive = async (id, archived) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to ${archived ? "archive" : "unarchive"} this company?`
-      )
-    )
-      return;
+  const key = await askAdminKey();  
+  if (!key) return; // user canceled
 
-    try {
-      await apiClient.patch(`/api/companies/${id}/archive`, { archived });
-      await fetchCompanies(showArchived);
-    } catch (err) {
-      console.error(err);
-      alert("❌ Failed to update archive status");
-    }
-  };
+  try {
+    await apiClient.patch(`/api/companies/${id}/archive`, {
+      archived,
+      masterKey: key
+    });
+
+    await fetchCompanies(showArchived);
+  } catch (err) {
+    console.error(err);
+    alert("❌ Failed: invalid master key or server error");
+  }
+};
 
   const handleAdd = () => {
     setDialog({ open: true, mode: "add", company: null });

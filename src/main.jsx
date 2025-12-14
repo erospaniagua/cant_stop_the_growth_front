@@ -6,18 +6,28 @@ import App from "./App.jsx";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { UserProvider } from "@/context/UserContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AdminConfirmProvider } from "@/context/AdminConfirmContext";
+
 import "./lib/i18n";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
-      <ThemeProvider>
-        <UserProvider>
-          <LanguageProvider>
-            <App />
-          </LanguageProvider>
-        </UserProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <UserProvider>
+      <AdminConfirmProvider>
+        <SidebarProvider>
+        <BrowserRouter>
+          <ThemeProvider>
+            <LanguageProvider>
+              <App />
+            </LanguageProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+        </SidebarProvider>
+      </AdminConfirmProvider>
+    </UserProvider>
   </StrictMode>
 );
+
+         
+          

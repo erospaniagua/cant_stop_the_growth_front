@@ -8,8 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
-import UserConfirmDialog from "./UserConfirmDialog";
 import { apiClient } from "@/api/client";
+import { useAdminConfirm } from "@/context/AdminConfirmContext";
+
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
@@ -48,7 +49,10 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
+  const confirmAdmin = useAdminConfirm();
+
   const { token, user: currentUser } = useUser();
+
   const [companies, setCompanies] = useState([]);
   const [openConfirm, setOpenConfirm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -58,6 +62,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
     email: "",
     password: "",
     role: "coach",
+    subRole: "",
     companyId: "",
     categories: [],
   });
@@ -82,6 +87,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         email: user.email,
         password: "",
         role: user.role,
+        subRole: user.subRole || "",
         companyId: user.companyId?._id || "",
         categories: user.categories || [],
       });
@@ -91,6 +97,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
         email: "",
         password: "",
         role: "coach",
+        subRole: "",
         companyId: "",
         categories: [],
       });
@@ -115,62 +122,79 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const body = { ...form };
-    if (!requiresCompany) delete body.companyId;
-    if (!requiresCategories) delete body.categories;
+  const body = { ...form };
 
-    if (!user) {
-      const { ok, message } = validatePassword(form.password);
-      if (!ok) return alert(message);
+  // roles cleanup
+  if (!requiresCompany) delete body.companyId;
+  if (!requiresCategories) delete body.categories;
+  if (!["admin", "coach"].includes(form.role)) delete body.subRole;
+
+  // ask for admin key
+  const adminKey = await confirmAdmin();
+  if (!adminKey) return;
+  body.masterKey = adminKey;
+
+  // password validation only for creation
+  if (!user) {
+    const validation = validatePassword(form.password);
+    if (!validation.ok) return alert(validation.message);
+  }
+
+  try {
+    if (user) {
+      await apiClient.put(`/api/users/${user._id}`, body);
+    } else {
+      await apiClient.post("/api/users", body);
     }
 
-    try {
-      if (user) {
-        await apiClient.put(`/api/users/${user._id}`, body); // backend expects PUT or POST -> adapt accordingly
-      } else {
-        await apiClient.post("/api/users", body);
-      }
+    onOpenChange(false);
+    onRefresh();
+  } catch (err) {
+    alert(err.message || "Error saving user");
+  }
+};
 
-      onOpenChange(false);
-      onRefresh();
-    } catch (err) {
-      alert(err.message || "Error saving user");
-    }
-  };
 
   const canArchive = user && currentUser?.id !== user._id;
 
   const handleArchive = () => setOpenConfirm(true);
 
-  const confirmArchive = async (masterKey) => {
-    try {
-      await apiClient.patch(`/users/${user._id}/archive`, { masterKey });
-      alert("User archived successfully");
-      setOpenConfirm(false);
-      onOpenChange(false);
-      onRefresh();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
+  const confirmArchive = async () => {
+  const adminKey = await confirmAdmin();
+  if (!adminKey) return;
+
+  try {
+    await apiClient.patch(`/api/users/${user._id}/archive`, { masterKey: adminKey });
+    alert("User archive status updated.");
+    onOpenChange(false);
+    onRefresh();
+  } catch (err) {
+    alert(err.message || "Error archiving user");
+  }
+};
+
+
 
   const handleForceReset = async () => {
-    const newPass = generateTempPassword();
+  const newPass = generateTempPassword();
 
-    try {
-      const result = await apiClient.patch(`/api/users/${user._id}/force-reset`, {
-        newPassword: newPass,
-      });
+  const adminKey = await confirmAdmin();
+  if (!adminKey) return;
 
-      alert(
-        `Temporary password set:\n\n${newPass}\n\nUser will be forced to change it at next login.`
-      );
-    } catch (err) {
-      alert(err.message || "Error forcing password reset");
-    }
-  };
+  try {
+    await apiClient.patch(`/api/users/${user._id}/force-reset`, {
+      newPassword: newPass,
+      masterKey: adminKey,
+    });
+
+    alert(`Temporary password set:\n\n${newPass}`);
+  } catch (err) {
+    alert(err.message || "Error forcing reset");
+  }
+};
+
 
   return (
     <>
@@ -181,6 +205,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {/* NAME */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Name"
@@ -189,6 +214,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               required
             />
 
+            {/* EMAIL */}
             <input
               className="border rounded p-2 w-full"
               placeholder="Email"
@@ -198,19 +224,27 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               required
             />
 
+            {/* NEW USER PASSWORD */}
             {!user && (
               <div>
                 <div className="flex gap-2 mb-2">
-                  <Button type="button" variant="outline" onClick={handleGeneratePassword}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeneratePassword}
+                  >
                     Generate Random Password
                   </Button>
                 </div>
+
                 <input
                   className="border rounded p-2 w-full"
                   placeholder="Password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
                   required
                 />
 
@@ -226,6 +260,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </div>
             )}
 
+            {/* FORCE RESET */}
             {user && (
               <Button
                 type="button"
@@ -237,6 +272,7 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </Button>
             )}
 
+            {/* ROLE */}
             <select
               className="border rounded p-2 w-full"
               value={form.role}
@@ -249,11 +285,30 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               <option value="team-manager">Team Manager</option>
             </select>
 
+            {/* SUB-ROLE — only admin/coach */}
+            {["admin", "coach"].includes(form.role) && (
+              <select
+                className="border rounded p-2 w-full"
+                value={form.subRole}
+                onChange={(e) =>
+                  setForm({ ...form, subRole: e.target.value })
+                }
+              >
+                <option value="">No sub-role</option>
+                <option value="salesman">Salesman</option>
+                <option value="coach">Coach (Internal)</option>
+                <option value="successManager">Success Manager</option>
+              </select>
+            )}
+
+            {/* COMPANY */}
             {requiresCompany && (
               <select
                 className="border rounded p-2 w-full"
                 value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, companyId: e.target.value })
+                }
               >
                 <option value="">Select a company</option>
                 {companies.map((c) => (
@@ -264,12 +319,18 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </select>
             )}
 
+            {/* CATEGORIES */}
             {requiresCategories && (
               <div className="border rounded p-2">
-                <label className="block mb-2 font-medium text-sm">Categories</label>
+                <label className="block mb-2 font-medium text-sm">
+                  Categories
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   {CATEGORY_OPTIONS.map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 text-sm">
+                    <label
+                      key={cat}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={form.categories.includes(cat)}
@@ -283,9 +344,14 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
               </div>
             )}
 
+            {/* FOOTER */}
             <DialogFooter className="flex justify-between gap-2 pt-2">
               {canArchive && (
-                <Button variant="destructive" type="button" onClick={handleArchive}>
+                <Button
+                  variant="destructive"
+                  type="button"
+                  onClick={confirmArchive}
+                >
                   {user.isArchived ? "Unarchive" : "Archive"}
                 </Button>
               )}
@@ -297,12 +363,6 @@ export default function UserDialog({ open, onOpenChange, user, onRefresh }) {
           </form>
         </DialogContent>
       </Dialog>
-
-      <UserConfirmDialog
-        open={openConfirm}
-        onOpenChange={setOpenConfirm}
-        onConfirm={confirmArchive}
-      />
     </>
   );
 }

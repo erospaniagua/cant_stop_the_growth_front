@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@/context/UserContext";
+import { apiClient } from "@/api/client";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -27,15 +28,36 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   const logoInputRef = useRef(null);
 
   const normalizeDate = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  return date.toISOString().split("T")[0]; // "YYYY-MM-DD"
-};
+    if (!value) return "";
+    const date = new Date(value);
+    return date.toISOString().split("T")[0];
+  };
 
-  // Dropdown options (mock for now)
-  const coachOptions = ["Danny Vega", "Alice Parker", "Tomás Aguilar"];
-  const salesmanOptions = ["Sofia Ramirez", "Liam Cohen", "Alex Wang"];
-  const successManagerOptions = ["Elena Cruz", "Miguel Torres", "Ryan Lee"];
+  /* ===== Dynamic CRM staff lists ===== */
+  const [coachOptions, setCoachOptions] = useState([]);
+  const [salesmanOptions, setSalesmanOptions] = useState([]);
+  const [successManagerOptions, setSuccessManagerOptions] = useState([]);
+
+  const loadUserOptions = async () => {
+    try {
+      const [coach, sales, success] = await Promise.all([
+        apiClient.get("/api/users/by-subrole/coach"),
+        apiClient.get("/api/users/by-subrole/salesman"),
+        apiClient.get("/api/users/by-subrole/successManager"),
+      ]);
+
+      setCoachOptions(coach);
+      setSalesmanOptions(sales);
+      setSuccessManagerOptions(success);
+    } catch (err) {
+      console.error("Error loading subrole users:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadUserOptions();
+  }, []);
+
   const subscriptionOptions = [
     "Leadership",
     "Service",
@@ -74,26 +96,24 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
   /* =========================================================
      Load data when editing
-  ========================================================= */
+  ========================================================== */
   useEffect(() => {
-  if (data) {
-    setFormData((prev) => ({
-      ...prev,
-      ...data,
-      subscription: data.subscription || [],
-      additionalServices: data.additionalServices || [],
-      trade: data.trade || { hvac: false, plumbing: false, electrical: false },
-
-      // FIXED DATE FIELDS
-      kickoffDay: normalizeDate(data.kickoffDay),
-      onsiteDay: normalizeDate(data.onsiteDay),
-    }));
-  }
-}, [data]);
+    if (data) {
+      setFormData((prev) => ({
+        ...prev,
+        ...data,
+        subscription: data.subscription || [],
+        additionalServices: data.additionalServices || [],
+        trade: data.trade || { hvac: false, plumbing: false, electrical: false },
+        kickoffDay: normalizeDate(data.kickoffDay),
+        onsiteDay: normalizeDate(data.onsiteDay),
+      }));
+    }
+  }, [data]);
 
   /* =========================================================
      Validation
-  ========================================================= */
+  ========================================================== */
   const validateField = (field, value) => {
     switch (field) {
       case "name":
@@ -117,15 +137,11 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       case "trade":
         if (!Object.values(value).some(Boolean)) return t("requiredTrade");
         break;
-      case "coach":
-        if (!value) return t("requiredCoach");
-        break;
-      case "salesman":
-        if (!value) return t("requiredSalesman");
-        break;
-      case "successManager":
-        if (!value) return t("requiredSuccessManager");
-        break;
+        case "coach":
+        case "salesman":
+        case "successManager":
+  return "";
+
       case "revenue":
         if (!value) return t("requiredRevenue");
         if (Number(value) <= 0) return t("invalidRevenue");
@@ -138,9 +154,9 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
   const validateAll = () => {
     const errs = {};
-    Object.entries(formData).forEach(([key, val]) => {
-      const e = validateField(key, val);
-      if (e) errs[key] = e;
+    Object.entries(formData).forEach(([k, v]) => {
+      const e = validateField(k, v);
+      if (e) errs[k] = e;
     });
     return errs;
   };
@@ -151,7 +167,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
   /* =========================================================
      Handlers
-  ========================================================= */
+  ========================================================== */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
@@ -159,17 +175,13 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
   const handleFileSelect = (e, field) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData((p) => ({ ...p, [field]: file }));
-    }
+    if (file) setFormData((p) => ({ ...p, [field]: file }));
   };
 
   const handleDrop = (e, field) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      setFormData((p) => ({ ...p, [field]: file }));
-    }
+    if (file) setFormData((p) => ({ ...p, [field]: file }));
   };
 
   const handleTrade = (key) => {
@@ -180,19 +192,16 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   };
 
   const toggleArrayValue = (field, value) =>
-    setFormData((p) => {
-      const arr = p[field] || [];
-      return {
-        ...p,
-        [field]: arr.includes(value)
-          ? arr.filter((x) => x !== value)
-          : [...arr, value],
-      };
-    });
+    setFormData((p) => ({
+      ...p,
+      [field]: p[field].includes(value)
+        ? p[field].filter((x) => x !== value)
+        : [...p[field], value],
+    }));
 
   /* =========================================================
      Submit
-  ========================================================= */
+  ========================================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -203,7 +212,6 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     }
 
     const fd = new FormData();
-
     Object.entries(formData).forEach(([key, value]) => {
       if (["trade", "subscription", "additionalServices"].includes(key)) {
         fd.append(key, JSON.stringify(value));
@@ -216,20 +224,18 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     if (formData.logo) fd.append("companyLogo", formData.logo);
 
     const companyId = data?._id;
-    const isEditMode = currentMode === "edit" && companyId;
+    const isEdit = currentMode === "edit" && companyId;
 
-    const url = isEditMode
+    const url = isEdit
       ? `${API_URL}/api/companies/${companyId}`
       : `${API_URL}/api/companies`;
 
-    const method = isEditMode ? "PUT" : "POST";
+    const method = isEdit ? "PUT" : "POST";
 
     try {
       const res = await fetch(url, {
         method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
 
@@ -240,23 +246,15 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       }
 
       const result = await res.json();
-
-      alert(
-        isEditMode
-          ? "✅ " + t("companyUpdatedSuccess")
-          : "✅ " + t("companyAddedSuccess")
-      );
-
+      alert(isEdit ? "Company updated" : "Company added");
       onSubmit?.(result);
+
     } catch (err) {
       console.error(err);
       alert("❌ Network error");
     }
   };
 
-  /* =========================================================
-     File preview helper
-  ========================================================= */
   const getFileUrl = (file) => {
     if (!file) return "";
     if (file instanceof File) return URL.createObjectURL(file);
@@ -266,7 +264,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
   /* =========================================================
      UI
-  ========================================================= */
+  ========================================================== */
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode !== "add" && isView && (
@@ -311,10 +309,11 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       {/* Contact */}
       <div className="grid gap-2">
         <Label>{t("primaryContact")} *</Label>
+
         <Input
           name="contactPhone"
-          placeholder={t("phone")}
           value={formData.contactPhone}
+          placeholder={t("phone")}
           onChange={handleChange}
           disabled={isView}
         />
@@ -324,8 +323,8 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
 
         <Input
           name="contactEmail"
-          placeholder={t("email")}
           value={formData.contactEmail}
+          placeholder={t("email")}
           onChange={handleChange}
           disabled={isView}
         />
@@ -346,6 +345,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
             <RadioGroupItem value="private equity" id="equity" />
             <Label htmlFor="equity">{t("privateEquity")}</Label>
           </div>
+
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="private owner" id="ownerType" />
             <Label htmlFor="ownerType">{t("privateOwner")}</Label>
@@ -357,14 +357,14 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
       {/* Trade */}
       <div className="grid gap-2">
         <Label>{t("trade")} *</Label>
-        {["hvac", "plumbing", "electrical"].map((k) => (
-          <div key={k} className="flex items-center space-x-2">
+        {["hvac", "plumbing", "electrical"].map((key) => (
+          <div key={key} className="flex items-center space-x-2">
             <Checkbox
-              checked={!!formData.trade[k]}
-              onCheckedChange={() => handleTrade(k)}
+              checked={!!formData.trade[key]}
+              onCheckedChange={() => handleTrade(key)}
               disabled={isView}
             />
-            <Label className="capitalize">{t(k)}</Label>
+            <Label className="capitalize">{t(key)}</Label>
           </div>
         ))}
         {errors.trade && <p className="text-red-500 text-sm">{errors.trade}</p>}
@@ -385,16 +385,14 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         ))}
       </div>
 
-      {/* Additional Services */}
+      {/* Services */}
       <div className="grid gap-2">
         <Label>{t("additionalServices")}</Label>
         {serviceOptions.map((opt) => (
           <div key={opt} className="flex items-center space-x-2">
             <Checkbox
               checked={formData.additionalServices.includes(opt)}
-              onCheckedChange={() =>
-                toggleArrayValue("additionalServices", opt)
-              }
+              onCheckedChange={() => toggleArrayValue("additionalServices", opt)}
               disabled={isView}
             />
             <Label>{opt}</Label>
@@ -402,35 +400,38 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         ))}
       </div>
 
-      {/* Select fields */}
-      {[["coach", t("coachLabel"), coachOptions],
-      ["salesman", t("salesman"), salesmanOptions],
-      ["successManager", t("successManager"), successManagerOptions]].map(
-        ([name, label, opts]) => (
-          <div key={name} className="grid gap-2">
-            <Label>{label} *</Label>
-            <select
-              name={name}
-              className="border rounded-md p-2"
-              value={formData[name]}
-              onChange={handleChange}
-              disabled={isView}
-            >
-              <option value="">{t("selectOption")}</option>
-              {opts.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-            {errors[name] && (
-              <p className="text-red-500 text-sm">{errors[name]}</p>
-            )}
-          </div>
-        )
-      )}
+      {/* Dynamic staff selectors */}
+      {[
+        ["coach", t("coachLabel"), coachOptions],
+        ["salesman", t("salesman"), salesmanOptions],
+        ["successManager", t("successManager"), successManagerOptions],
+      ].map(([name, label, opts]) => (
+        <div key={name} className="grid gap-2">
+          <Label>{label} </Label>
 
-      {/* Dates */}
+          <select
+            name={name}
+            className="border rounded-md p-2"
+            value={formData[name]}
+            onChange={handleChange}
+            disabled={isView}
+          >
+            <option value="">{t("selectOption")}</option>
+
+            {opts.map((o) => (
+              <option key={o._id} value={o.name}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+
+          {errors[name] && (
+            <p className="text-red-500 text-sm">{errors[name]}</p>
+          )}
+        </div>
+      ))}
+
+      {/* Kickoff Day */}
       <div className="grid gap-2">
         <Label>{t("trainingKickoffDay")}</Label>
         <Input
@@ -442,6 +443,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         />
       </div>
 
+      {/* Onsite Day */}
       <div className="grid gap-2">
         <Label>{t("onsiteDay")}</Label>
         <Input
@@ -468,9 +470,10 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
         )}
       </div>
 
-      {/* Quote PDF */}
+      {/* Quote Upload */}
       <div className="grid gap-2">
         <Label>{t("quotePdf")}</Label>
+
         {isView && formData.quote && (
           <a
             href={getFileUrl(formData.quote)}
@@ -492,6 +495,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
             <p className="text-sm text-muted-foreground">
               {formData.quote ? formData.quote.name : t("dragOrClickPdf")}
             </p>
+
             <input
               type="file"
               ref={fileInputRef}
@@ -527,6 +531,7 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
             <p className="text-sm text-muted-foreground">
               {formData.logo ? formData.logo.name : t("dragOrClickImage")}
             </p>
+
             <input
               type="file"
               ref={logoInputRef}

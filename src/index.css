@@ -92,6 +92,8 @@
   }
 }
 
+
+
 @layer base {
   * {
     @apply border-border;
@@ -99,4 +101,98 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+/* Fix FullCalendar event overflow */
+.fc-daygrid-event {
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Prevent multi-day stretch behavior */
+.fc-event {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+}
+
+.fc-daygrid-event-harness {
+  max-width: 100% !important;
+}
+
+/* ===============================
+   FullCalendar – Dark Mode Fix
+================================ */
+
+/* ===============================
+   FullCalendar – Match Sidebar Dark Mode
+================================ */
+
+.dark .fc {
+  background-color: hsl(var(--sidebar-background));
+  color: hsl(var(--sidebar-foreground));
+}
+
+/* Header (month / week title) */
+.dark .fc-toolbar-title {
+  color: hsl(var(--sidebar-foreground));
+}
+
+/* Column headers */
+.dark .fc-col-header-cell {
+  background-color: hsl(var(--sidebar-accent));
+  color: hsl(var(--sidebar-foreground));
+  border-color: hsl(var(--sidebar-border));
+}
+
+/* Day cells */
+.dark .fc-daygrid-day {
+  background-color: hsl(var(--sidebar-background));
+  border-color: hsl(var(--sidebar-border));
+}
+
+/* Today highlight */
+.dark .fc-day-today {
+  background-color: hsl(var(--sidebar-accent)) !important;
+}
+
+/* Events */
+.dark .fc-event {
+  background-color: hsl(var(--sidebar-accent));
+  border-color: hsl(var(--sidebar-border));
+  color: hsl(var(--sidebar-foreground));
+}
+
+/* Event hover */
+.dark .fc-event:hover {
+  filter: brightness(1.1);
+}
+
+/* Time grid (if applicable) */
+.dark .fc-timegrid-slot,
+.dark .fc-timegrid-axis {
+  background-color: hsl(var(--sidebar-background));
+  border-color: hsl(var(--sidebar-border));
+}
+
+/* Buttons */
+.dark .fc-button {
+  background-color: hsl(var(--sidebar-accent));
+  border-color: hsl(var(--sidebar-border));
+  color: hsl(var(--sidebar-foreground));
+}
+
+.dark .fc-button:hover {
+  filter: brightness(1.1);
+}
+
+.dark .fc-button-primary {
+  background-color: hsl(var(--sidebar-primary));
+  border-color: hsl(var(--sidebar-primary));
+  color: hsl(var(--sidebar-primary-foreground));
+}
+
+.dark .fc-button-primary:hover {
+  filter: brightness(1.1);
 }

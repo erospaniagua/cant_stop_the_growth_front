@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/api/client.js";
 import PhaseEditor from "@/components/LearningRoute/PhaseEditor";
+import {useAdminConfirm} from "@/context/AdminConfirmContext";
 
 const CATEGORY_OPTIONS = [
   "Leadership",
@@ -21,6 +22,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
   const [publishing, setPublishing] = useState(false);
   const [showPhaseEditor, setShowPhaseEditor] = useState(null);
   const hasBootstrapped = useRef(false);
+  const confirmAdmin = useAdminConfirm();
 
   /* ===========================================================
      Load existing route OR create a new one
@@ -33,7 +35,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
       if (routeId) {
         setLoading(true);
         try {
-          const data = await apiClient.get(`/api/learning-routes/${routeId}`);
+          const data = await apiClient.get(`/api/learning-tracks/${routeId}`);
           setRoute(data);
           setRouteTitle(data.title || "");
           setRouteDesc(data.description || "");
@@ -44,8 +46,8 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
       } else {
         setCreating(true);
         try {
-          const data = await apiClient.post("/api/learning-routes", {
-            title: "Untitled Learning Route",
+          const data = await apiClient.post("/api/learning-tracks", {
+            title: "Untitled Learning Track",
             description: "",
             categories: ["Leadership"],
           });
@@ -71,7 +73,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
 
     const timer = setTimeout(async () => {
       try {
-        await apiClient.patch(`/api/learning-routes/${route._id}`, {
+        await apiClient.patch(`/api/learning-tracks/${route._id}`, {
           title: routeTitle,
           description: routeDesc,
           categories,
@@ -99,7 +101,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
     if (!route?._id) return;
     try {
       const updated = await apiClient.post(
-        `/api/learning-routes/${route._id}/phases`,
+        `/api/learning-tracks/${route._id}/phases`,
         { title: `Phase ${route.phases?.length + 1 || 1}`, description: "" }
       );
       setRoute(updated);
@@ -113,23 +115,33 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
      Publish the route
   =========================================================== */
   const handlePublish = async () => {
-    if (!route?._id) return;
-    setPublishing(true);
-    try {
-      const res = await apiClient.patch(
-        `/api/learning-routes/${route._id}/publish`
-      );
-      setRoute(res.route || res);
-      alert("✅ Learning Route published!");
-      refresh?.();
-      handleClose();
-    } catch (err) {
-      console.error("Error publishing route:", err);
-      alert(err?.message || "❌ Failed to publish route");
-    } finally {
-      setPublishing(false);
-    }
-  };
+  if (!route?._id) return;
+
+  // Ask for master key
+  const masterKey = await confirmAdmin();
+  if (!masterKey) return; // user clicked cancel
+
+  setPublishing(true);
+
+  try {
+    const res = await apiClient.patch(
+      `/api/learning-tracks/${route._id}/publish`,
+      { masterKey }
+    );
+
+    setRoute(res.route || res);
+    alert("✅ Learning Track published!");
+    refresh?.();
+    handleClose();
+  } catch (err) {
+    console.error("Error publishing route:", err);
+    alert(err?.response?.data?.message || "❌ Failed to publish route");
+  } finally {
+    setPublishing(false);
+  }
+};
+
+
 
   const handleClose = () => {
     hasBootstrapped.current = false;
@@ -154,7 +166,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
           <input
             value={routeTitle}
             onChange={(e) => setRouteTitle(e.target.value)}
-            placeholder="Untitled Learning Route"
+            placeholder="Untitled Learning Track"
             className="w-full bg-transparent text-xl font-semibold outline-none truncate"
           />
           <input
@@ -181,7 +193,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
             disabled={!route || publishing}
             className="px-3 py-2 text-sm rounded bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50"
           >
-            {publishing ? "Publishing..." : "Publish Route"}
+            {publishing ? "Publishing..." : "Publish Track"}
           </button>
           <button
             onClick={handleClose}
@@ -256,7 +268,7 @@ export default function LearningRouteEditor({ open, onClose, routeId, refresh })
           routeId={route._id}
           phaseId={showPhaseEditor}
           refresh={() =>
-            apiClient.get(`/api/learning-routes/${route._id}`).then(setRoute)
+            apiClient.get(`/api/learning-tracks/${route._id}`).then(setRoute)
           }
         />
       )}
