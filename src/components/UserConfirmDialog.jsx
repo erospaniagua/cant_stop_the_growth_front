@@ -8,7 +8,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
-export default function UserConfirmDialog({ open, onOpenChange, onConfirm }) {
+export default function UserConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  message, // 🆕 optional
+}) {
   const [key, setKey] = useState("")
   const [showKey, setShowKey] = useState(false)
 
@@ -28,6 +33,14 @@ export default function UserConfirmDialog({ open, onOpenChange, onConfirm }) {
           <DialogTitle>Confirm Admin Action</DialogTitle>
         </DialogHeader>
 
+        {/* Optional contextual warning */}
+        {message && (
+          <div className="mb-3 rounded border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-300 whitespace-pre-line">
+            {message}
+          </div>
+        )}
+
+        {/* Default explanation (always shown) */}
         <p className="text-sm text-muted-foreground mb-3">
           To confirm this action, please enter the admin master key.
         </p>

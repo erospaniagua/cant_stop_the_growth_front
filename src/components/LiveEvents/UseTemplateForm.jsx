@@ -313,11 +313,21 @@ async function loadCoaches() {
       {/* MODAL */}
       {showInvites && (
         <InvitationsModal
-          mode="new-instance"
-          initialInvites={autoEnroll ? candidatePreview.map(c => c._id) : []}
-          onClose={() => setShowInvites(false)}
-          onConfirm={invitesList => handleCreateInstance(invitesList)}
-        />
+  mode="new-instance"
+  initialInvites={
+    autoEnroll
+      ? candidatePreview.map(c => ({
+          userId: {
+            _id: c._id,
+            name: c.name,
+            email: c.email,
+          },
+        }))
+      : []
+  }
+  onClose={() => setShowInvites(false)}
+  onConfirm={invitesList => handleCreateInstance(invitesList)}
+/>
       )}
 
     </div>
