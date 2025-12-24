@@ -49,7 +49,7 @@ export default function MyLearningRoutes() {
 
   return (
     <div className="p-8 space-y-4">
-      <h1 className="text-2xl font-semibold mb-4">My Learning Routes</h1>
+      <h1 className="text-2xl font-semibold mb-4">My Learning Tracks</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {routes.map((r) => {

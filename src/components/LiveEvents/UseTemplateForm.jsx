@@ -63,12 +63,13 @@ async function loadCoaches() {
       setInstanceDescription(data.description || "");
 
       setSessionDates(
-        data.sessions.map(s => ({
-          sessionId: s._id,
-          name: s.name,
-          assignedDate: ""
-        }))
-      );
+  data.sessions.map(s => ({
+    sessionId: s._id,
+    name: s.name,
+    assignedDate: "",
+    durationMinutes: 60, // default, not forced
+  }))
+);
 
       previewAutoEnrollCandidates(data.categories || []);
 
@@ -129,9 +130,10 @@ async function loadCoaches() {
       title: instanceTitle,
       description: instanceDescription,
       sessions: sessionDates.map(s => ({
-        sessionId: s.sessionId,
-        assignedDate: s.assignedDate || null
-      })),
+  sessionId: s.sessionId,
+  assignedDate: s.assignedDate || null,
+  durationMinutes: s.durationMinutes || 60,
+})),
       autoEnroll,
       coachId: coachId || null,
       zoomUrl: zoomUrl || null
@@ -145,14 +147,23 @@ async function loadCoaches() {
 
     // 2️⃣ Commit initial invites (THIS WAS MISSING)
     if (invitesList?.length) {
-      await apiClient.post(
-        `/api/tour-invites/${instance._id}/bulk-commit`,
-        {
-          add: invitesList,
-          remove: []
-        }
-      );
+  const normalizedInvites = invitesList
+    .map(inv => {
+      if (inv?.userId?._id) return inv.userId._id;
+      if (typeof inv === "string") return inv;
+      if (inv?.email) return inv.email;
+      return null;
+    })
+    .filter(Boolean);
+
+  await apiClient.post(
+    `/api/tour-invites/${instance._id}/bulk-commit`,
+    {
+      add: normalizedInvites,
+      remove: []
     }
+  );
+}
 
     onCreatedInstance(instance._id);
 
@@ -298,9 +309,30 @@ async function loadCoaches() {
             <div className="text-sm text-gray-500">
               Leave empty to schedule later.
             </div>
+            <select
+  className="p-2 border rounded w-full"
+  value={session.durationMinutes}
+  onChange={(e) => {
+    const value = Number(e.target.value);
+    setSessionDates(prev => {
+      const copy = [...prev];
+      copy[idx].durationMinutes = value;
+      return copy;
+    });
+  }}
+>
+  <option value={30}>30 minutes</option>
+  <option value={45}>45 minutes</option>
+  <option value={60}>1 hour</option>
+  <option value={90}>1.5 hours</option>
+  <option value={120}>2 hours</option>
+</select>
+
           </div>
         ))}
       </div>
+
+      
 
       {/* NEXT BUTTON */}
       <button

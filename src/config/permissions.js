@@ -77,7 +77,10 @@ export const permissions = {
     routes: [
       "/managers",
       "/team-calendar", // NEW: Team calendar
-      "/settings"
+      "/settings",
+      "/my-learning-tracks",
+      "/my-learning-tracks/:routeId",
+      "/my-learning-tracks/:routeId/lessons/:lessonId",
     ],
     can: {
       changeLanguage: true,

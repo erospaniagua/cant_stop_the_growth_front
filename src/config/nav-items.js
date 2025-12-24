@@ -5,7 +5,7 @@ export const navItems = {
   admin: [
     { title: "dashboard", href: "/", icon: Home },
     { title: "companies", href: "/companies", icon: Building2 },
-    { title: "coaches", href: "/coaches", icon: Users },
+    //{ title: "coaches", href: "/coaches", icon: Users },
     { title: "Learning Tracks", href: "/learning-tracks", icon: BookOpen },
     { title: "Event Planning", href: "/event-planning", icon: CalendarCheck },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays }, // Admin calendar
@@ -37,7 +37,9 @@ export const navItems = {
 
   "team-manager": [
     { title: "Dashboard", href: "/managers", icon: LayoutDashboard },
+    { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "Team Calendar", href: "/team-calendar", icon: CalendarDays },
-    { title: "Settings", href: "/settings", icon: Settings }
+    { title: "Settings", href: "/settings", icon: Settings },
+   
   ],
 };
