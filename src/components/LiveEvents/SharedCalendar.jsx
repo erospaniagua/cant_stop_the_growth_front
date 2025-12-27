@@ -54,6 +54,11 @@ export default function SharedCalendar({ fetchMode, companyId, managerId }) {
   }
 
   useEffect(() => {
+    console.log("SharedCalendar effect", {
+    fetchMode,
+    companyId,
+    managerId
+  });
     if (fetchMode === "user") loadEvents();
     if (fetchMode === "company" && companyId) loadEvents();
     if (fetchMode === "team-manager" && managerId) loadEvents();

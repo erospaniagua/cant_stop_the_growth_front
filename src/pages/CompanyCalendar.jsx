@@ -10,7 +10,7 @@ export default function CompanyCalendar() {
 
       <SharedCalendar
         fetchMode="company"
-        companyId={user.companyId}
+        companyId={user.company?.id}
       />
     </div>
   );

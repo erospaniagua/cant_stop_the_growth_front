@@ -26,8 +26,6 @@ export const permissions = {
   coach: {
     routes: [
       "/",
-      "/students",
-      "/courses",
       "/settings",
       "/my-calendar"  // NEW: Coach calendar
     ],
@@ -75,9 +73,12 @@ export const permissions = {
 
   "team-manager": {
     routes: [
-      "/managers",
+      "/",
       "/team-calendar", // NEW: Team calendar
-      "/settings"
+      "/settings",
+      "/my-learning-tracks",
+      "/my-learning-tracks/:routeId",
+      "/my-learning-tracks/:routeId/lessons/:lessonId",
     ],
     can: {
       changeLanguage: true,

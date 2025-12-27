@@ -154,7 +154,7 @@ export default function TemplatesList({
                     <td className="px-4 py-2 text-right">
                         <button
                         onClick={() =>onOpenInvites(inst._id)}
-                        className="px-3 py-1 bg-red-500 hover:bg-blue-700 text-white rounded"
+                        className="px-3 py-1 bg-red-500 hover:bg-blue-700 text-white rounded mr-3"
                       >
                         Invites
                       </button>
