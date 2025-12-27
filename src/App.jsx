@@ -112,15 +112,8 @@ function App() {
           }
         />
 
-        {/* TEAM MANAGER */}
-        <Route
-          path="/managers"
-          element={
-            <ProtectedRoute path="/managers">
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+       
+        
 
         {/* STUDENT LEARNING ROUTES */}
         <Route

@@ -16,27 +16,27 @@ export const navItems = {
   ],
 
   coach: [
-    { title: "students", href: "/students", icon: Users },
-    { title: "courses", href: "/courses", icon: BookOpen },
+    { title: "dashboard", href: "/", icon: Home },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
     { title: "settings", href: "/settings", icon: Settings }
   ],
 
   student: [
+    { title: "dashboard", href: "/", icon: Home },
     { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
     { title: "settings", href: "/settings", icon: Settings }
   ],
 
   company: [
-    { title: "courses", href: "/courses", icon: GraduationCap },
+    { title: "dashboard", href: "/", icon: Home },
     { title: "Company Calendar", href: "/company-calendar", icon: CalendarDays },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
     { title: "settings", href: "/settings", icon: Settings }
   ],
 
   "team-manager": [
-    { title: "Dashboard", href: "/managers", icon: LayoutDashboard },
+    { title: "dashboard", href: "/", icon: Home },
     { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "Team Calendar", href: "/team-calendar", icon: CalendarDays },
     { title: "Settings", href: "/settings", icon: Settings },

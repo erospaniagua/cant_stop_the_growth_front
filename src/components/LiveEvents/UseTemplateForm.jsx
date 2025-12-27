@@ -127,17 +127,23 @@ async function loadCoaches() {
     setSaving(true);
 
     const payload = {
-      title: instanceTitle,
-      description: instanceDescription,
-      sessions: sessionDates.map(s => ({
-  sessionId: s.sessionId,
-  assignedDate: s.assignedDate || null,
-  durationMinutes: s.durationMinutes || 60,
-})),
-      autoEnroll,
-      coachId: coachId || null,
-      zoomUrl: zoomUrl || null
-    };
+  title: instanceTitle,
+  description: instanceDescription,
+
+  sessions: sessionDates.map(s => ({
+    sessionId: s.sessionId,
+    assignedDate: s.assignedDate || null,
+
+    // duration is ONLY sent to create the initial CalendarEvent
+    ...(s.assignedDate
+      ? { durationMinutes: s.durationMinutes || 60 }
+      : {})
+  })),
+
+  autoEnroll,
+  coachId: coachId || null,
+  zoomUrl: zoomUrl || null
+};
 
     // 1️⃣ Create instance
     const instance = await apiClient.post(
@@ -309,24 +315,31 @@ async function loadCoaches() {
             <div className="text-sm text-gray-500">
               Leave empty to schedule later.
             </div>
-            <select
-  className="p-2 border rounded w-full"
-  value={session.durationMinutes}
-  onChange={(e) => {
-    const value = Number(e.target.value);
-    setSessionDates(prev => {
-      const copy = [...prev];
-      copy[idx].durationMinutes = value;
-      return copy;
-    });
-  }}
->
-  <option value={30}>30 minutes</option>
-  <option value={45}>45 minutes</option>
-  <option value={60}>1 hour</option>
-  <option value={90}>1.5 hours</option>
-  <option value={120}>2 hours</option>
-</select>
+            {session.assignedDate ? (
+  <select
+    className="p-2 border rounded w-full"
+    value={session.durationMinutes}
+    onChange={(e) => {
+      const value = Number(e.target.value);
+      setSessionDates(prev => {
+        const copy = [...prev];
+        copy[idx].durationMinutes = value;
+        return copy;
+      });
+    }}
+  >
+    <option value={30}>30 minutes</option>
+    <option value={45}>45 minutes</option>
+    <option value={60}>1 hour</option>
+    <option value={90}>1.5 hours</option>
+    <option value={120}>2 hours</option>
+  </select>
+) : (
+  <div className="text-sm text-gray-500">
+    Set a date to choose duration
+  </div>
+)}
+
 
           </div>
         ))}

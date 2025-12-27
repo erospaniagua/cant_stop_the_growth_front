@@ -16,7 +16,7 @@ import { useUser } from "@/context/UserContext";
 import { apiClient } from "@/api/client";
 
 //const API_URL = import.meta.env.VITE_API_BASE_URL;
-const API_URL = import.meta.env.LOCAL_API_BASE_URL
+const API_URL = import.meta.env.VITE_API_BASE_URL
 /* =========================================================
    CompanyForm
 ========================================================= */

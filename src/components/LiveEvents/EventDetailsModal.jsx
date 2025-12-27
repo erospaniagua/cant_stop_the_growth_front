@@ -7,7 +7,7 @@ export default function EventDetailsModal({
   eventId,
   onClose,
   onUpdated,
-  onEdit, // parent-controlled edit
+  onEdit,
 }) {
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState(null);
@@ -15,7 +15,6 @@ export default function EventDetailsModal({
   const [openPreJoin, setOpenPreJoin] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showAttendees, setShowAttendees] = useState(false);
-  const coach = event?.templateInstanceId?.coachId || null;
 
   const { user: currentUser } = useUser();
 
@@ -65,6 +64,28 @@ export default function EventDetailsModal({
 
   if (!eventId) return null;
 
+  /* ======================================================
+     Attendee visibility logic
+  ====================================================== */
+
+  const isStaff = ["admin", "coach"].includes(currentUser?.role);
+  const currentCompanyId = currentUser?.company?.id || null;
+
+  const visibleParticipants =
+    event && !isStaff
+      ? event.participants.filter(p => {
+          // Same company
+          if (p.companyId?._id === currentCompanyId) return true;
+
+          // CSTG users (admins / coaches without company)
+          if (!p.companyId) return true;
+
+          return false;
+        })
+      : event?.participants || [];
+
+  const coach = event?.templateInstanceId?.coachId || null;
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div
@@ -105,13 +126,13 @@ export default function EventDetailsModal({
 
             {/* Coach */}
             {coach && (
-  <p className="text-sm text-neutral-500">
-    Coach:{" "}
-    <span className="font-medium text-neutral-800 dark:text-neutral-200">
-      {coach.name}
-    </span>
-  </p>
-)}
+              <p className="text-sm text-neutral-500">
+                Coach:{" "}
+                <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                  {coach.name}
+                </span>
+              </p>
+            )}
 
             {/* Description */}
             <div className="mt-4">
@@ -131,15 +152,15 @@ export default function EventDetailsModal({
               >
                 <span className="font-semibold">Attendees</span>
                 <span className="opacity-70">
-                  {event.participants.length}
+                  {visibleParticipants.length}
                 </span>
               </button>
 
-              {event.participants.length > 0 && (
+              {visibleParticipants.length > 0 && (
                 <p className="text-xs text-neutral-500 mt-1">
-                  {event.participants[0]?.name}
-                  {event.participants.length > 1 &&
-                    ` + ${event.participants.length - 1} more`}
+                  {visibleParticipants[0]?.name}
+                  {visibleParticipants.length > 1 &&
+                    ` + ${visibleParticipants.length - 1} more`}
                 </p>
               )}
             </div>
@@ -200,16 +221,16 @@ export default function EventDetailsModal({
           <div className="bg-white dark:bg-neutral-900 w-full max-w-lg max-h-[80vh] rounded-lg p-6 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
-                Attendees ({event.participants.length})
+                Attendees ({visibleParticipants.length})
               </h3>
               <button onClick={() => setShowAttendees(false)}>✕</button>
             </div>
 
-            {event.participants.length === 0 && (
+            {visibleParticipants.length === 0 && (
               <p className="text-neutral-500">No attendees</p>
             )}
 
-            {event.participants.map((p) => (
+            {visibleParticipants.map((p) => (
               <div
                 key={p._id}
                 className="flex items-center gap-3 py-2 border-b text-sm"
