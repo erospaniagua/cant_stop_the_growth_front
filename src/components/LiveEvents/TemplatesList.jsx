@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/api/client";
+import UserConfirmDialog from "@/components/UserConfirmDialog"
 
 export default function TemplatesList({
   onCreate,
@@ -11,6 +12,10 @@ export default function TemplatesList({
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState([]);
   const [error, setError] = useState(null);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetInst, setTargetInst] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Optional: If you plan to show instances in the table
   const [instances, setInstances] = useState([]);
@@ -40,6 +45,35 @@ export default function TemplatesList({
       /* ignore for now */
     }
   }
+
+  const openEraseDialog = (inst) => {
+  setTargetInst(inst);
+  setConfirmOpen(true);
+};
+
+const handleEraseInstance = async (masterKey) => {
+  if (!targetInst?._id) return;
+
+  try {
+    setDeleting(true);
+
+    await apiClient.del(`/api/template-instances/${targetInst._id}`, undefined, {
+      headers: { "x-master-key": masterKey },
+    });
+
+    setConfirmOpen(false);
+    setTargetInst(null);
+
+    // refresh list: call whatever you already use to reload instances
+    await loadInstances(); // <-- replace with your real function name
+  } catch (e) {
+    console.error("Failed to erase instance", e);
+    alert("❌ " + (e.message || "Failed to erase instance"));
+  } finally {
+    setDeleting(false);
+  }
+};
+
 
   if (loading) return <div>Loading templates…</div>;
   if (error) return <div className="text-red-500">{error}</div>;
@@ -164,11 +198,31 @@ export default function TemplatesList({
                       >
                         View
                       </button>
+                      <button
+                       onClick={() => openEraseDialog(inst)}
+                       disabled={deleting}
+                       className="px-3 py-1 bg-black hover:bg-red-700 text-white rounded ml-3"
+                       >
+                        Erase
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <UserConfirmDialog
+              open={confirmOpen}
+              onOpenChange={(v) => {
+              setConfirmOpen(v);
+              if (!v) setTargetInst(null);
+              }}
+            onConfirm={handleEraseInstance}
+            message={
+            targetInst
+            ? `This will PERMANENTLY delete this cohort instance:\n\n"${targetInst.title}"\n\nIt will also delete ALL related calendar events.\n\nThis cannot be undone.`
+            : ""
+            }
+            />
           </div>
         </div>
       )}

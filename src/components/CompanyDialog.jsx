@@ -16,7 +16,7 @@ import { useUser } from "@/context/UserContext";
 import { apiClient } from "@/api/client";
 
 //const API_URL = import.meta.env.VITE_API_BASE_URL;
-const API_URL = import.meta.env.VITE_API_BASE_URL
+const API_URL = import.meta.env.VITE_LOCAL_API_BASE_URL
 /* =========================================================
    CompanyForm
 ========================================================= */
@@ -37,6 +37,49 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
   const [coachOptions, setCoachOptions] = useState([]);
   const [salesmanOptions, setSalesmanOptions] = useState([]);
   const [successManagerOptions, setSuccessManagerOptions] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [partnerMode, setPartnerMode] = useState("select"); // "select" | "new" 
+  const [creatingPartner, setCreatingPartner] = useState(false);
+
+
+const handleCreatePartner = async () => {
+  const name = (formData.partnerName || "").trim();
+  if (!name) return;
+
+  try {
+    setCreatingPartner(true);
+
+    const created = await apiClient.post("/api/partners", { name });
+
+    if (!created?._id) {
+      console.error("Partner create returned unexpected payload:", created);
+      alert("❌ Partner creation failed");
+      return;
+    }
+
+    setPartners((prev) => {
+      const exists = prev.some((x) => x._id === created._id);
+      const next = exists ? prev : [...prev, created];
+      return next.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    });
+
+    setFormData((p) => ({
+      ...p,
+      partnerId: created._id,
+      partnerName: "",
+    }));
+
+    setPartnerMode("select");
+  } catch (e) {
+    console.error("Failed to create partner", e);
+    alert("❌ Failed to create partner");
+  } finally {
+    setCreatingPartner(false);
+  }
+};
+
+
+
 
   const loadUserOptions = async () => {
     try {
@@ -58,6 +101,37 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     loadUserOptions();
   }, []);
 
+useEffect(() => {
+  let alive = true;
+
+  async function loadPartners() {
+    try {
+      const list = await apiClient.get("/api/partners");
+      console.log("partners API raw:", list);
+
+      if (!alive) return;
+
+      const normalized = Array.isArray(list) ? list : [];
+      console.log("partners normalized:", normalized);
+
+      setPartners(normalized);
+    } catch (e) {
+      console.error("Failed to load partners", e);
+      if (alive) setPartners([]);
+    }
+  }
+
+  loadPartners();
+
+  return () => {
+    alive = false;
+  };
+}, []);
+
+
+ 
+
+
   const subscriptionOptions = [
     "Leadership",
     "Service",
@@ -76,6 +150,8 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     owner: "",
     contactPhone: "",
     contactEmail: "",
+    partnerId: "",
+    partnerName: "",
     type: "",
     trade: { hvac: false, plumbing: false, electrical: false },
     subscription: [],
@@ -98,18 +174,27 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
      Load data when editing
   ========================================================== */
   useEffect(() => {
-    if (data) {
-      setFormData((prev) => ({
-        ...prev,
-        ...data,
-        subscription: data.subscription || [],
-        additionalServices: data.additionalServices || [],
-        trade: data.trade || { hvac: false, plumbing: false, electrical: false },
-        kickoffDay: normalizeDate(data.kickoffDay),
-        onsiteDay: normalizeDate(data.onsiteDay),
-      }));
-    }
-  }, [data]);
+  if (data) {
+    const partnerId =
+      typeof data.partnerId === "object" && data.partnerId !== null
+        ? data.partnerId._id
+        : data.partnerId || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      ...data,
+      partnerId,
+      partnerName: "",
+      subscription: data.subscription || [],
+      additionalServices: data.additionalServices || [],
+      trade: data.trade || { hvac: false, plumbing: false, electrical: false },
+      kickoffDay: normalizeDate(data.kickoffDay),
+      onsiteDay: normalizeDate(data.onsiteDay),
+    }));
+
+    setPartnerMode("select");
+  }
+}, [data]);
 
   /* =========================================================
      Validation
@@ -212,47 +297,44 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
     }
 
     const fd = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (["trade", "subscription", "additionalServices"].includes(key)) {
-        fd.append(key, JSON.stringify(value));
-      } else if (key !== "quote" && key !== "logo") {
-        fd.append(key, value ?? "");
-      }
-    });
 
-    if (formData.quote) fd.append("quote", formData.quote);
-    if (formData.logo) fd.append("companyLogo", formData.logo);
+Object.entries(formData).forEach(([key, value]) => {
+  if (["trade", "subscription", "additionalServices"].includes(key)) {
+    fd.append(key, JSON.stringify(value));
+    return;
+  }
+
+  // skip files + partner fields (handled separately)
+  if (["quote", "logo", "partnerId", "partnerName"].includes(key)) return;
+
+  fd.append(key, value ?? "");
+});
+
+// Partner: send only one if provided.
+// If user skips, backend defaults to CSTG.
+if (formData.partnerId) {
+  fd.append("partnerId", formData.partnerId);
+} else if (formData.partnerName?.trim()) {
+  fd.append("partnerName", formData.partnerName.trim());
+}
+
+if (formData.quote) fd.append("quote", formData.quote);
+if (formData.logo) fd.append("companyLogo", formData.logo);
 
     const companyId = data?._id;
     const isEdit = currentMode === "edit" && companyId;
 
-    const url = isEdit
-      ? `${API_URL}/api/companies/${companyId}`
-      : `${API_URL}/api/companies`;
+    const path = isEdit ? `/api/companies/${companyId}` : "/api/companies";
+const method = isEdit ? "put" : "post";
 
-    const method = isEdit ? "PUT" : "POST";
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert("❌ " + err.message);
-        return;
-      }
-
-      const result = await res.json();
-      alert(isEdit ? "Company updated" : "Company added");
-      onSubmit?.(result);
-
-    } catch (err) {
-      console.error(err);
-      alert("❌ Network error");
-    }
+try {
+  const result = await apiClient[method](path, fd);
+  alert(isEdit ? "Company updated" : "Company added");
+  onSubmit?.(result);
+} catch (err) {
+  console.error(err);
+  alert("❌ " + (err.message || "Network error"));
+}
   };
 
   const getFileUrl = (file) => {
@@ -332,6 +414,81 @@ export function CompanyForm({ mode = "add", data = null, onSubmit }) {
           <p className="text-red-500 text-sm">{errors.contactEmail}</p>
         )}
       </div>
+     
+{/* Partner */}
+<div className="grid gap-2">
+  <Label>{t("partner")}</Label>
+
+  {partnerMode === "select" ? (
+    <select
+      className="border rounded-md p-2"
+      value={formData.partnerId || ""}
+      disabled={isView}
+      onChange={(e) => {
+        const v = e.target.value;
+
+        if (v === "__new__") {
+          setPartnerMode("new");
+          setFormData((p) => ({ ...p, partnerId: "", partnerName: "" }));
+          return;
+        }
+
+        setFormData((p) => ({ ...p, partnerId: v, partnerName: "" }));
+      }}
+    >
+      <option value="">{t("selectOption")}</option>
+
+      {partners.map((p) => (
+        <option key={p._id} value={p._id}>
+          {p.name}
+        </option>
+      ))}
+
+      {!isView && <option value="__new__">+ {t("addNewPartner")}</option>}
+    </select>
+  ) : (
+    <div className="grid gap-2">
+      <Input
+        name="partnerName"
+        value={formData.partnerName || ""}
+        placeholder={t("typePartnerName")}
+        disabled={isView}
+        onChange={(e) =>
+          setFormData((p) => ({
+            ...p,
+            partnerName: e.target.value,
+            partnerId: "",
+          }))
+        }
+      />
+
+      {!isView && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            onClick={handleCreatePartner}
+            disabled={creatingPartner || !formData.partnerName?.trim()}
+          >
+            {creatingPartner ? t("creating") : t("createPartner")}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setPartnerMode("select");
+              setFormData((p) => ({ ...p, partnerName: "" }));
+            }}
+          >
+            ← {t("backToPartnerList")}
+          </Button>
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
+
 
       {/* Type */}
       <div className="grid gap-2">

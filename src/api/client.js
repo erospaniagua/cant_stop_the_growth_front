@@ -1,16 +1,31 @@
 const API_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  import.meta.env.VITE_API_BASE_URL
+ 
 
-async function api(path, { method = "GET", body } = {}) {
+async function api(path, { method = "GET", body, headers: customHeaders } = {}) {
   const token = localStorage.getItem("token");
+
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(customHeaders || {}),
+  };
+
+  // ✅ Only set JSON content-type when body is plain JSON
+  if (!isFormData && body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const res = await fetch(`${API_URL}${path}`, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers,
+    body:
+      body === undefined
+        ? undefined
+        : isFormData
+        ? body
+        : JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -18,15 +33,16 @@ async function api(path, { method = "GET", body } = {}) {
     throw new Error(msg.message || `HTTP ${res.status}`);
   }
 
+  // handle empty responses (204 etc.)
+  if (res.status === 204) return null;
+
   return res.json();
 }
 
 export const apiClient = {
   get: (p) => api(p),
-  post: (p, b) => api(p, { method: "POST", body: b }),
-  put: (p, b) => api(p, { method: "PUT", body: b }),
-  patch: (p, b) => api(p, { method: "PATCH", body: b }),
-
-  // 🔥 FIX: allow DELETE with body
-  del: (p, b) => api(p, { method: "DELETE", body: b }),
+  post: (p, b, opts) => api(p, { method: "POST", body: b, ...(opts || {}) }),
+  put: (p, b, opts) => api(p, { method: "PUT", body: b, ...(opts || {}) }),
+  patch: (p, b, opts) => api(p, { method: "PATCH", body: b, ...(opts || {}) }),
+  del: (p, b, opts) => api(p, { method: "DELETE", body: b, ...(opts || {}) }),
 };

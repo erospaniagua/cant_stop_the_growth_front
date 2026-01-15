@@ -132,7 +132,9 @@ async function loadCoaches() {
 
   sessions: sessionDates.map(s => ({
     sessionId: s.sessionId,
-    assignedDate: s.assignedDate || null,
+    assignedDate: s.assignedDate
+  ? new Date(s.assignedDate).toISOString()
+  : null,
 
     // duration is ONLY sent to create the initial CalendarEvent
     ...(s.assignedDate
