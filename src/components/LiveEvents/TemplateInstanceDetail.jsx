@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/api/client";
 
+
 export default function TemplateInstanceDetail({ instanceId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [instance, setInstance] = useState(null);
@@ -11,9 +12,12 @@ export default function TemplateInstanceDetail({ instanceId, onBack }) {
   const [coachId, setCoachId] = useState("");
   const [zoomUrl, setZoomUrl] = useState("");
 
+  
+
   const [savingInstanceMeta, setSavingInstanceMeta] = useState(false);
   const [savingSession, setSavingSession] = useState(null);
 
+  
   /* ============================================================
      Load data
   ============================================================ */

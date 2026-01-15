@@ -22,7 +22,7 @@ export default function Login() {
           coach: "/coaches",
           student: "/",
           company: "/companies",
-          "team-manager": "/managers",
+          "team-manager": "/",
         }[user.role] || "/"
 
       navigate(route)
