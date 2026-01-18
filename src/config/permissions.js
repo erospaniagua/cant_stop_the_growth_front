@@ -59,7 +59,9 @@ export const permissions = {
   company: {
     routes: [
       "/",
-      "/courses",
+      "/my-learning-tracks",
+      "/my-learning-tracks/:routeId",
+      "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/company-calendar", // NEW: Company-wide calendar
       "/settings",
       "/my-calendar"
