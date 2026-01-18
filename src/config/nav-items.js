@@ -30,6 +30,7 @@ export const navItems = {
 
   company: [
     { title: "dashboard", href: "/", icon: Home },
+    { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "Company Calendar", href: "/company-calendar", icon: CalendarDays },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
     { title: "settings", href: "/settings", icon: Settings }
