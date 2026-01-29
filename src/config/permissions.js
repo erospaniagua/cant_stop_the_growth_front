@@ -12,7 +12,9 @@ export const permissions = {
       "/settings",
       "/admin/users",
       "/event-planning",
-      "/my-calendar" // NEW: Admin master calendar
+      "/my-calendar",
+      "/career-maps",
+      "/admin/career-maps/:id", // NEW: Admin master calendar
     ],
     can: {
       addCompany: true,
@@ -45,7 +47,9 @@ export const permissions = {
       "/my-learning-tracks/:routeId",
       "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/my-calendar", // NEW: Student calendar
-      "/settings"
+      "/settings",
+      "/my-career-maps",
+      "/career-maps/:careerMapId"
     ],
     can: {
       addCompany: false,
@@ -64,7 +68,8 @@ export const permissions = {
       "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/company-calendar", // NEW: Company-wide calendar
       "/settings",
-      "/my-calendar"
+      "/my-calendar",
+      "/team-careers"
     ],
     can: {
       viewCourses: true,
@@ -81,6 +86,8 @@ export const permissions = {
       "/my-learning-tracks",
       "/my-learning-tracks/:routeId",
       "/my-learning-tracks/:routeId/lessons/:lessonId",
+      "/team-careers",
+      "/my-career-maps"
     ],
     can: {
       changeLanguage: true,

@@ -15,7 +15,11 @@ import MyLearningRoutesPage from "./pages/MyLearningRoutes";
 import MyLearningRoutePreview from "./components/routes/MyLearningRoutePreview";
 import MyLearningLessonPlayer from "./components/routes/MyLearningLessonPlayer.jsx";
 import EventPlanning from "@/pages/EventPlanning";
-
+import CareerMaps from "./pages/CareerMaps";
+import MyCareerMaps from "./pages/MyCareerMaps";
+import TeamCareers from "./pages/TeamCareers";
+import AdminCareerMapDetail from "./components/Maps/AdminCareerMapDetail";
+import CareerMapStudentDetail from "@/components/Maps/CareerMapStudentDetail";
 import MyCalendar from "@/pages/MyCalendar";
 import CompanyCalendar from "@/pages/CompanyCalendar";
 import TeamCalendar from "@/pages/TeamCalendar";
@@ -185,7 +189,53 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/*CAREER MAPS*/}
+        <Route
+          path="/career-maps"
+          element={
+            <ProtectedRoute path="/career-maps">
+              <CareerMaps />
+            </ProtectedRoute>
+          }
+        />
+        {/*MY CAREER MAPS*/}
+        <Route
+          path="/my-career-maps"
+          element={
+            <ProtectedRoute path="/my-career-maps">
+              <MyCareerMaps />
+            </ProtectedRoute>
+          }
+        />
+        {/* ADMINTEAM CAREER*/}
+        <Route
+          path="/team-careers"
+          element={
+            <ProtectedRoute path="/team-careers">
+              <TeamCareers />
+            </ProtectedRoute>
+          }
+        />
+         {/* ADMIN TEAM CAREER DETAIL*/}
+        <Route
+          path="/admin/career-maps/:id"
+          element={
+            <ProtectedRoute path="/admin/career-maps/:id">
+              <AdminCareerMapDetail />
+            </ProtectedRoute>
+          }
+        />
+        {/* STUDENT CAREER DETAIL*/}
+        <Route
+          path="/career-maps/:careerMapId"
+          element={
+            <ProtectedRoute path="/career-maps/:careerMapId">
+              <CareerMapStudentDetail />
+            </ProtectedRoute>
+          }
+        />
       </Route>
+      
     </Routes>
   );
 }

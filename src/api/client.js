@@ -1,5 +1,5 @@
 const API_URL =
-  import.meta.env.VITE_API_BASE_URL
+  import.meta.env.VITE_LOCAL_API_BASE_URL
  
 
 async function api(path, { method = "GET", body, headers: customHeaders } = {}) {
@@ -29,9 +29,14 @@ async function api(path, { method = "GET", body, headers: customHeaders } = {}) 
   });
 
   if (!res.ok) {
-    const msg = await res.json().catch(() => ({}));
-    throw new Error(msg.message || `HTTP ${res.status}`);
-  }
+  const payload = await res.json().catch(() => ({}));
+
+  const err = new Error(payload.message || `HTTP ${res.status}`);
+  err.status = res.status;
+  err.payload = payload;
+  err.url = `${API_URL}${path}`;
+  throw err;
+}
 
   // handle empty responses (204 etc.)
   if (res.status === 204) return null;

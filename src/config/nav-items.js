@@ -8,11 +8,13 @@ export const navItems = {
     //{ title: "coaches", href: "/coaches", icon: Users },
     { title: "Learning Tracks", href: "/learning-tracks", icon: BookOpen },
     { title: "Event Planning", href: "/event-planning", icon: CalendarCheck },
+    { title: "Career Maps", href: "/career-maps", icon: CalendarCheck },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays }, // Admin calendar
     { title: "Teams", href: "/teams", icon: Puzzle },
     { title: "analytics", href: "/analytics", icon: BarChart },
     { title: "Users", href: "/admin/users", icon: Users },
     { title: "settings", href: "/settings", icon: Settings },
+
   ],
 
   coach: [
@@ -25,6 +27,7 @@ export const navItems = {
     { title: "dashboard", href: "/", icon: Home },
     { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
+    {title:"My Career Maps", href:"/my-career-maps", icon:CalendarDays},
     { title: "settings", href: "/settings", icon: Settings }
   ],
 
@@ -32,6 +35,7 @@ export const navItems = {
     { title: "dashboard", href: "/", icon: Home },
     { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
     { title: "Company Calendar", href: "/company-calendar", icon: CalendarDays },
+    { title:"Team Careers", href:"/team-careers", icon:CalendarDays},
     { title: "My Calendar", href: "/my-calendar", icon: CalendarDays },
     { title: "settings", href: "/settings", icon: Settings }
   ],
@@ -39,8 +43,11 @@ export const navItems = {
   "team-manager": [
     { title: "dashboard", href: "/", icon: Home },
     { title: "My Learning Tracks", href: "/my-learning-tracks", icon: GraduationCap },
+    { title:"My Career Maps", href:"/my-career-maps", icon:CalendarDays},
     { title: "Team Calendar", href: "/team-calendar", icon: CalendarDays },
+    { title:"Team Careers", href:"/team-careers", icon:CalendarDays},
     { title: "Settings", href: "/settings", icon: Settings },
+
    
   ],
 };
