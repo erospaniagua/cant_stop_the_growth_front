@@ -1,5 +1,5 @@
 const API_URL =
-  import.meta.env.VITE_LOCAL_API_BASE_URL
+  import.meta.env.VITE_API_BASE_URL
  
 
 async function api(path, { method = "GET", body, headers: customHeaders } = {}) {

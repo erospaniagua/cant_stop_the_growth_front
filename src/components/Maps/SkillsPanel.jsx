@@ -104,40 +104,43 @@ function SkillForm({ mode, initial, careerMapId, careerLevelId, onSaved, onClose
   }, [initial?._id]);
 
   async function submit(e) {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setError("");
 
-    const payload = {
-      careerMapId,
-      careerLevelId,
-      title: title.trim(),
-      description: description.trim(),
-      skillType,
-      surveyQuestion: surveyQuestion.trim(),
-      points: Number(points || 1),
-      evidencePolicy,
-    };
+  const base = {
+    title: title.trim(),
+    description: description.trim(),
+    skillType,
+    surveyQuestion: surveyQuestion.trim(),
+    points: Number(points || 1),
+    evidencePolicy,
+  };
 
-    if (!payload.title) {
-      setError("Title is required.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      if (mode === "create") {
-        await apiClient.post("/api/career-skills", payload);
-      } else {
-        await apiClient.patch(`/api/career-skills/${initial._id}`, payload);
-      }
-      onSaved?.();
-      onClose?.();
-    } catch (err) {
-      setError(err?.response?.data?.message || err?.message || "Failed to save skill");
-    } finally {
-      setSaving(false);
-    }
+  if (!base.title) {
+    setError("Title is required.");
+    return;
   }
+
+  setSaving(true);
+  try {
+    if (mode === "create") {
+      await apiClient.post("/api/career-skills", {
+        ...base,
+        careerMapId,
+        careerLevelId,
+      });
+    } else {
+      await apiClient.patch(`/api/career-skills/${initial._id}`, base);
+    }
+
+    onSaved?.();
+    onClose?.();
+  } catch (err) {
+    setError(err?.response?.data?.message || err?.message || "Failed to save skill");
+  } finally {
+    setSaving(false);
+  }
+}
 
   return (
     <ModalShell title={mode === "create" ? "New Skill" : "Edit Skill"} onClose={onClose}>

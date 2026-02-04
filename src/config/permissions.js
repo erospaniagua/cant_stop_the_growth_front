@@ -14,7 +14,9 @@ export const permissions = {
       "/event-planning",
       "/my-calendar",
       "/career-maps",
-      "/admin/career-maps/:id", // NEW: Admin master calendar
+      "/admin/career-maps/:id",
+      "/team-careers", 
+      "/team-careers/:studentId/career-maps/:careerMapId",
     ],
     can: {
       addCompany: true,
@@ -29,7 +31,10 @@ export const permissions = {
     routes: [
       "/",
       "/settings",
-      "/my-calendar"  // NEW: Coach calendar
+      "/my-calendar",
+      "/team-careers/:studentId/career-maps/:careerMapId",
+      "/team-careers",
+      "/team-careers/:studentId/career-maps/:careerMapId",
     ],
     can: {
       addCompany: false,
@@ -69,7 +74,8 @@ export const permissions = {
       "/company-calendar", // NEW: Company-wide calendar
       "/settings",
       "/my-calendar",
-      "/team-careers"
+      "/team-careers",
+      "/team-careers/:studentId/career-maps/:careerMapId"
     ],
     can: {
       viewCourses: true,
@@ -87,7 +93,9 @@ export const permissions = {
       "/my-learning-tracks/:routeId",
       "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/team-careers",
-      "/my-career-maps"
+      "/my-career-maps",
+      "/team-careers/:studentId/career-maps/:careerMapId",
+      "/career-maps/:careerMapId"
     ],
     can: {
       changeLanguage: true,

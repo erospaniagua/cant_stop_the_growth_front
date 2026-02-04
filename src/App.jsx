@@ -19,7 +19,7 @@ import CareerMaps from "./pages/CareerMaps";
 import MyCareerMaps from "./pages/MyCareerMaps";
 import TeamCareers from "./pages/TeamCareers";
 import AdminCareerMapDetail from "./components/Maps/AdminCareerMapDetail";
-import CareerMapStudentDetail from "@/components/Maps/CareerMapStudentDetail";
+import CareerMapDetail from "@/components/Maps/CareerMapDetail";
 import MyCalendar from "@/pages/MyCalendar";
 import CompanyCalendar from "@/pages/CompanyCalendar";
 import TeamCalendar from "@/pages/TeamCalendar";
@@ -207,7 +207,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* ADMINTEAM CAREER*/}
+        {/* ADMINTEAM CAREERs*/}
         <Route
           path="/team-careers"
           element={
@@ -230,7 +230,16 @@ function App() {
           path="/career-maps/:careerMapId"
           element={
             <ProtectedRoute path="/career-maps/:careerMapId">
-              <CareerMapStudentDetail />
+              <CareerMapDetail />
+            </ProtectedRoute>
+          }
+        />
+        {/* REVIEWER CAREER DETAIL*/}
+        <Route
+          path="/team-careers/:studentId/career-maps/:careerMapId"
+          element={
+            <ProtectedRoute path="/team-careers/:studentId/career-maps/:careerMapId">
+              <CareerMapDetail />
             </ProtectedRoute>
           }
         />

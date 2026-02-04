@@ -567,32 +567,7 @@ export default function AdminCareerMapDetail() {
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="px-3 py-2 rounded border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-800 dark:text-zinc-100"
-            onClick={fetchDetail}
-          >
-            Refresh
-          </button>
-
-          {canManage ? (
-            careerMap.published ? (
-              <button
-                className="px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => setConfirm({ type: "unpublish" })}
-              >
-                Unpublish
-              </button>
-            ) : (
-              <button
-                className="px-3 py-2 rounded bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setConfirm({ type: "publish" })}
-              >
-                Publish
-              </button>
-            )
-          ) : null}
-        </div>
+        
       </div>
 
       {/* Tabs */}

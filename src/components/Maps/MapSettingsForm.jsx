@@ -152,7 +152,7 @@ export default function MapSettingsForm({ map, onSave }) {
       />
 
       <MultiSelectCatalog
-        label="Career Path Categories (optional)"
+        label="Career Path Department And Trade (optional)"
         valueIds={careerPathCategoryIds}
         onChangeIds={setCareerPathCategoryIds}
         listPath="/api/maps-catalogs/career-path-categories"
