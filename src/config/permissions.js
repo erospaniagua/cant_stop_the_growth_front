@@ -12,7 +12,11 @@ export const permissions = {
       "/settings",
       "/admin/users",
       "/event-planning",
-      "/my-calendar" // NEW: Admin master calendar
+      "/my-calendar",
+      "/career-maps",
+      "/admin/career-maps/:id",
+      "/team-careers", 
+      "/team-careers/:studentId/career-maps/:careerMapId",
     ],
     can: {
       addCompany: true,
@@ -27,7 +31,10 @@ export const permissions = {
     routes: [
       "/",
       "/settings",
-      "/my-calendar"  // NEW: Coach calendar
+      "/my-calendar",
+      "/team-careers/:studentId/career-maps/:careerMapId",
+      "/team-careers",
+      "/team-careers/:studentId/career-maps/:careerMapId",
     ],
     can: {
       addCompany: false,
@@ -45,7 +52,9 @@ export const permissions = {
       "/my-learning-tracks/:routeId",
       "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/my-calendar", // NEW: Student calendar
-      "/settings"
+      "/settings",
+      "/my-career-maps",
+      "/career-maps/:careerMapId"
     ],
     can: {
       addCompany: false,
@@ -64,7 +73,9 @@ export const permissions = {
       "/my-learning-tracks/:routeId/lessons/:lessonId",
       "/company-calendar", // NEW: Company-wide calendar
       "/settings",
-      "/my-calendar"
+      "/my-calendar",
+      "/team-careers",
+      "/team-careers/:studentId/career-maps/:careerMapId"
     ],
     can: {
       viewCourses: true,
@@ -81,6 +92,10 @@ export const permissions = {
       "/my-learning-tracks",
       "/my-learning-tracks/:routeId",
       "/my-learning-tracks/:routeId/lessons/:lessonId",
+      "/team-careers",
+      "/my-career-maps",
+      "/team-careers/:studentId/career-maps/:careerMapId",
+      "/career-maps/:careerMapId"
     ],
     can: {
       changeLanguage: true,

@@ -74,7 +74,7 @@ export default function MyLearningRoutes() {
               </p>
 
               {/* Categories */}
-              <div className="flex flex-wrap gap-1 mb-2">
+              <div className="flex flex-wrap gap-1 mb-2"> 
                 {r.categories?.map((cat) => (
                   <span
                     key={cat}
