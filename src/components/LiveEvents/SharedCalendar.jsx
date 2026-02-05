@@ -37,15 +37,20 @@ export default function SharedCalendar({ fetchMode, companyId, managerId }) {
 
       const data = await apiClient.get(url);
 
-      const formatted = data.map(ev => ({
-        id: ev._id,
-        title: ev.title,
-        start: ev.startDate,
-        end: ev.endDate,
-        backgroundColor: ev.templateInstanceId?.color || ev.color,
-        borderColor: ev.templateInstanceId?.color || ev.color,
-        extendedProps: ev
-      }));
+      const formatted = data.map((ev) => {
+  const color = ev.color || ev.templateInstanceId?.color || "hsl(0, 0%, 70%)";
+
+  return {
+    id: ev._id,
+    title: ev.title,
+    start: ev.startDate,
+    end: ev.endDate,
+    backgroundColor: color,
+    borderColor: color,
+    extendedProps: ev,
+  };
+});
+
 
       setEvents(formatted);
     } catch (err) {
@@ -75,9 +80,20 @@ export default function SharedCalendar({ fetchMode, companyId, managerId }) {
   };
 
   const closeModal = () => {
-    setSelectedEventId(null);
-    loadEvents();
-  };
+  setSelectedEventId(null);
+
+  if (fetchMode === "admin-range") {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      const view = api.view;
+      loadEvents(view.activeStart, view.activeEnd);
+      return;
+    }
+  }
+
+  loadEvents();
+};
+
 
   return (
     <div className="p-4 border rounded black">
