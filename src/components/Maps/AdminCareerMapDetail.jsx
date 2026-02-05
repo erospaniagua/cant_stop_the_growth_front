@@ -93,45 +93,47 @@ function CareerLevelFormModal({ mode, careerMapId, initial, onClose, onSaved }) 
 
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setSaving(true);
+  e.preventDefault();
+  setError("");
+  setSaving(true);
 
-   const cleanedKpis = (kpiTargets || [])
-  .filter((x) => x && x.kpiId)
-  .map((x) => ({ kpiId: x.kpiId, target: Number(x.target || 0) }));
+  const cleanedKpis = (kpiTargets || [])
+    .filter((x) => x && x.kpiId)
+    .map((x) => ({ kpiId: x.kpiId, target: Number(x.target || 0) }));
 
-const payload = {
-  careerMapId,
-  title: title.trim(),
-  salary: {
-    min: salaryMin === "" ? null : Number(salaryMin),
-    max: salaryMax === "" ? null : Number(salaryMax),
-  },
-  kpiTargets: cleanedKpis,
-};
+  const base = {
+    title: title.trim(),
+    salary: {
+      min: salaryMin === "" ? null : Number(salaryMin),
+      max: salaryMax === "" ? null : Number(salaryMax),
+    },
+    kpiTargets: cleanedKpis,
+  };
 
+  // ✅ only include careerMapId when creating
+  const payload = mode === "create" ? { ...base, careerMapId } : base;
 
-    if (!payload.title) {
-      setSaving(false);
-      setError("Title is required.");
-      return;
-    }
-
-    try {
-      if (mode === "create") {
-        await apiClient.post("/api/career-levels", payload);
-      } else {
-        await apiClient.patch(`/api/career-levels/${initial._id}`, payload);
-      }
-      onSaved?.();
-      onClose?.();
-    } catch (err) {
-      setError(err?.message || "Failed to save level");
-    } finally {
-      setSaving(false);
-    }
+  if (!payload.title) {
+    setSaving(false);
+    setError("Title is required.");
+    return;
   }
+
+  try {
+    if (mode === "create") {
+      await apiClient.post("/api/career-levels", payload);
+    } else {
+      await apiClient.patch(`/api/career-levels/${initial._id}`, payload);
+    }
+    onSaved?.();
+    onClose?.();
+  } catch (err) {
+    setError(err?.response?.data?.message || err?.message || "Failed to save level");
+  } finally {
+    setSaving(false);
+  }
+}
+
 
   return (
     <ModalShell
